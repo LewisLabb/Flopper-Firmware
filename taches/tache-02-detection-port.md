@@ -81,6 +81,7 @@ def is_port_available(port: str) -> bool:
 ```
 
 Comportement attendu :
+
 - `find_flipper()` parcourt les ports via `serial.tools.list_ports.comports()`.
 - Filtre sur `vid == FLIPPER_VID` (1155) et `pid == FLIPPER_PID` (22336).
 - Si aucun trouvé → lève `FlipperNotFoundError` avec message en français : `"Aucun Flipper Zero détecté. Vérifiez la connexion USB."`
