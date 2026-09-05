@@ -16,6 +16,7 @@ from momentum_ultra.manifest import (
     PackManifest,
     PlanAction,
 )
+from momentum_ultra.modules import ModuleType, export_modules_settings
 from momentum_ultra.regions import (
     RegionCode,
     export_region_config,
@@ -23,11 +24,24 @@ from momentum_ultra.regions import (
 )
 
 
-def get_default_pack(region: RegionCode | str = RegionCode.EU) -> PackManifest:
-    """Return the built-in curated Momentum Ultra pack configured for a region."""
+def get_default_pack(
+    region: RegionCode | str = RegionCode.EU,
+    modules: list[ModuleType] | None = None,
+) -> PackManifest:
+    """Return the built-in curated Momentum Ultra pack configured for a region and modules."""
     profile = get_region_profile(region)
     region_data = export_region_config(profile)
     dict_assets = export_dictionary_assets(get_default_dictionaries())
+    modules_list = (
+        modules
+        if modules is not None
+        else [
+            ModuleType.CC1101,
+            ModuleType.NRF24,
+            ModuleType.ESP32_MARAUDER,
+        ]
+    )
+    modules_data = export_modules_settings(modules_list)
 
     return PackManifest(
         name="Momentum-Ultra-Curated-Pack",
@@ -72,6 +86,7 @@ def get_default_pack(region: RegionCode | str = RegionCode.EU) -> PackManifest:
             "animations_enabled": True,
             "log_level": "info",
             "region": region_data,
+            "modules": modules_data,
         },
     )
 

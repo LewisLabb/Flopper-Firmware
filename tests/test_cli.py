@@ -29,10 +29,11 @@ def _make_mock_flipper_port(device: str = "COM3") -> MagicMock:
 class MockSerialClient:
     """Mock serial stream for CLI testing."""
 
-    def __init__(self) -> None:
+    def __init__(self, response_text: str = "") -> None:
         """Initialize mock serial connection."""
         self.is_open: bool = True
         self.written: list[bytes] = []
+        self.response_text = response_text
 
     def write(self, data: bytes) -> int:
         """Record written bytes."""
@@ -40,7 +41,11 @@ class MockSerialClient:
         return len(data)
 
     def read(self, size: int = 1) -> bytes:
-        """Return prompt marker."""
+        """Return prompt marker with optional response text."""
+        if self.response_text:
+            out = f"{self.response_text}\r\n>: ".encode()
+            self.response_text = ""
+            return out
         return b">: "
 
     def reset_input_buffer(self) -> None:
@@ -113,6 +118,20 @@ def test_main_detect_port_busy(capsys: pytest.CaptureFixture[str]) -> None:
         assert exit_code == 1
         captured = capsys.readouterr()
         assert "mais le port est occupé" in captured.err
+
+
+def test_main_diagnose_modules(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --diagnose-modules detects connected hardware modules."""
+    mock_port = _make_mock_flipper_port("COM3")
+    mock_serial = MockSerialClient(response_text="SPI device: CC1101 active")
+    with (
+        patch("serial.tools.list_ports.comports", return_value=[mock_port]),
+        patch("serial.Serial", return_value=mock_serial),
+    ):
+        exit_code = main(["--diagnose-modules"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "CC1101" in captured.out
 
 
 def test_main_install_dry_run_default(capsys: pytest.CaptureFixture[str]) -> None:

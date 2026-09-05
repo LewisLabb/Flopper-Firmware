@@ -15,6 +15,10 @@ from momentum_ultra.device import (
 from momentum_ultra.flipper_client import FlipperClient, FlipperClientError
 from momentum_ultra.installer import execute_install_plan, get_default_pack
 from momentum_ultra.manifest import generate_install_plan
+from momentum_ultra.modules import (
+    detect_connected_modules,
+    get_default_module_configs,
+)
 from momentum_ultra.regions import RegionCode, get_available_regions, get_region_profile
 
 
@@ -40,6 +44,11 @@ def _build_parser() -> argparse.ArgumentParser:
         "--detect",
         action="store_true",
         help="Détecte le Flipper Zero connecté et vérifie la disponibilité du port série.",
+    )
+    parser.add_argument(
+        "--diagnose-modules",
+        action="store_true",
+        help="Diagnostique et affiche les modules d'extension externes connectés au GPIO.",
     )
     parser.add_argument(
         "--install",
@@ -98,6 +107,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.detect:
         return _handle_detect()
 
+    if args.diagnose_modules:
+        return _handle_diagnose_modules()
+
     if args.install:
         return _handle_install(
             dry_run=args.dry_run,
@@ -139,6 +151,45 @@ def _handle_detect() -> int:
 
     print(f"Flipper Zero détecté sur {device.port}.")
     return 0
+
+
+def _handle_diagnose_modules() -> int:
+    """Handle the --diagnose-modules command flow."""
+    try:
+        device = find_flipper()
+    except FlipperDeviceError as err:
+        print(f"Erreur : {err}", file=sys.stderr)
+        return 1
+
+    if not is_port_available(device.port):
+        print(
+            f"Flipper Zero détecté sur {device.port}, mais le port est inaccessible.",
+            file=sys.stderr,
+        )
+        return 1
+
+    print(f"\n--- Diagnostic des modules GPIO sur {device.port} ---")
+    try:
+        with FlipperClient(port=device.port, dry_run=True) as client:
+            gpio_output = client.send_cmd("gpio status")
+            modules = detect_connected_modules(gpio_output)
+            all_configs = get_default_module_configs()
+
+            if not modules:
+                print("Aucun module externe détecté sur le connecteur GPIO.")
+                print(
+                    "Note : Les modules CC1101, nRF24 et ESP32 sont configurables dans les réglages."
+                )
+            else:
+                print(f"Modules détectés ({len(modules)}) :")
+                for mod in modules:
+                    cfg = all_configs.get(mod)
+                    if cfg:
+                        print(f"  • {cfg.name} : {cfg.description}")
+            return 0
+    except FlipperClientError as err:
+        print(f"Erreur de communication : {err}", file=sys.stderr)
+        return 1
 
 
 def _handle_install(

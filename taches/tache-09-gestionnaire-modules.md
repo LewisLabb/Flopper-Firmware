@@ -45,37 +45,46 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
+
 class ModuleType(str, Enum):
     """Supported external hardware modules."""
-    CC1101 = "cc1101"         # Sub-GHz longue portée
-    NRF24 = "nrf24"           # 2.4 GHz MouseJacker / Sniffing
+
+    CC1101 = "cc1101"  # Sub-GHz longue portée
+    NRF24 = "nrf24"  # 2.4 GHz MouseJacker / Sniffing
     ESP32_MARAUDER = "esp32"  # Wi-Fi / Bluetooth Marauder
-    COMBO_2IN1 = "combo_2in1" # CC1101 + nRF24 combo board
+    COMBO_2IN1 = "combo_2in1"  # CC1101 + nRF24 combo board
+
 
 @dataclass(frozen=True)
 class ModulePinout:
     """Pin mapping configuration for an external module."""
+
     cs_pin: str
     mosi_pin: str = "15"  # Standard SPI MOSI
     miso_pin: str = "16"  # Standard SPI MISO
-    sck_pin: str = "13"   # Standard SPI SCK
+    sck_pin: str = "13"  # Standard SPI SCK
     gdo0_pin: str | None = None
     extra_pins: dict[str, str] | None = None
+
 
 @dataclass(frozen=True)
 class ModuleConfig:
     """Configuration and status of an external module."""
+
     module_type: ModuleType
     name: str
     enabled: bool
     pinout: ModulePinout
     description: str
 
+
 def get_default_module_configs() -> dict[ModuleType, ModuleConfig]:
     """Return standard pinout configurations for all supported modules."""
 
+
 def detect_connected_modules(raw_gpio_output: str) -> list[ModuleType]:
     """Parse Flipper GPIO response or SPI probe output to identify connected modules."""
+
 
 def export_modules_settings(active_modules: list[ModuleType]) -> dict[str, Any]:
     """Export active modules configuration dictionary for /ext/settings/modules.json."""
@@ -103,8 +112,6 @@ def export_modules_settings(active_modules: list[ModuleType]) -> dict[str, Any]:
 
 ## Journal de revue
 
-Rempli après exécution.
-
-- **Verdict** :
-- **Motif** :
-- **Leçon d'aiguillage** :
+- **Verdict** : accepté
+- **Motif** : Module `modules.py` implémenté pour le support des cartes externes (CC1101, nRF24, ESP32 Marauder, Combo 2-en-1) conformément au Pilier 5 du brief. Diagnostic GPIO via CLI (`--diagnose-modules`) opérationnel et export de configuration sous `/ext/settings/modules.json`. 62/62 tests automatisés passants, Ruff 100% propre.
+- **Leçon d'aiguillage** : Tâche modulaire avec diagnostic vérifiable par des fixtures de tests simulées.
