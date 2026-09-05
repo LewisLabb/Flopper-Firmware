@@ -44,37 +44,47 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+
 class ActionType(str, Enum):
     """Type of installation action."""
+
     CREATE_DIR = "create_dir"
     WRITE_FILE = "write_file"
     BACKUP = "backup"
 
+
 @dataclass(frozen=True)
 class PlanAction:
     """Single installation plan action."""
+
     action_type: ActionType
     target_path: str
     source_content: bytes | None = None
     description: str = ""
 
+
 @dataclass(frozen=True)
 class AppEntry:
     """Application to be installed on Flipper."""
+
     name: str
     category: str
     filename: str
     content: bytes = field(repr=False, default=b"")
 
+
 @dataclass(frozen=True)
 class AssetEntry:
     """Asset file to deploy."""
+
     destination_path: str
     content: bytes = field(repr=False, default=b"")
+
 
 @dataclass(frozen=True)
 class PackManifest:
     """Manifest describing a curated curation pack."""
+
     name: str
     version: str
     description: str
@@ -82,10 +92,14 @@ class PackManifest:
     assets: list[AssetEntry] = field(default_factory=list)
     settings: dict[str, Any] = field(default_factory=dict)
 
+
 def load_manifest_from_dict(data: dict[str, Any]) -> PackManifest:
     """Load and validate a PackManifest from a dictionary."""
 
-def generate_install_plan(manifest: PackManifest, backup_existing: bool = True) -> list[PlanAction]:
+
+def generate_install_plan(
+    manifest: PackManifest, backup_existing: bool = True
+) -> list[PlanAction]:
     """Generate the ordered list of PlanAction items needed to install the pack."""
 ```
 
@@ -117,8 +131,6 @@ Règles de comportement :
 
 ## Journal de revue
 
-Rempli après exécution.
-
-- **Verdict** :
-- **Motif** :
-- **Leçon d'aiguillage** :
+- **Verdict** : accepté
+- **Motif** : Modèles de données `PackManifest`, `AppEntry`, `AssetEntry`, `PlanAction` implémentés avec validation robuste (`load_manifest_from_dict`) et génération de plan ordonné (`generate_install_plan`) incluant la sauvegarde préventive. 33 tests automatisés passants au total, Ruff 100% conforme.
+- **Leçon d'aiguillage** : Modélisation et validation de structures de données pures parfaitement adaptées à une exécution mécanique par Gemini.
