@@ -85,10 +85,76 @@ taches/.gitkeep
 - Une dépendance non listée serait requise
 - Le contrat ci-dessus paraît incohérent ou incomplet
 
+## Correction de contrat (post-revue, 2026-09-05)
+
+La revue a établi que le contrat de cette fiche était inécrivable tel quel : il exigeait
+« Fonction unique : `main` » tout en exigeant un test sur le résultat de l'analyse
+d'arguments, que `main` seul n'expose pas. L'exécutant a tranché en ajoutant
+`_build_parser()` au lieu de déclencher la condition d'arrêt « le contrat paraît
+incohérent ».
+
+Cette section ne réécrit pas le contrat exécuté : le verdict ci-dessous porte sur la
+fiche telle qu'elle a été donnée. Elle fixe la formulation à reprendre.
+
+- **`src/momentum_ultra/cli.py` — au lieu de « Fonction unique »** : « Une seule fonction
+  *publique* : `def main(argv: list[str] | None = None) -> int:`. Les fonctions privées
+  (préfixées `_`) sont autorisées si elles servent le contrat. »
+- **Test du garde-fou — au lieu de « l'analyse de `[]` produit `dry_run is True` »** :
+  « `main` rend le mode simulation observable de l'extérieur (message affiché ou valeur
+  retournée), et le test le vérifie *à travers `main`*, jamais à travers le parser. »
+  Motif : au niveau du parser, un futur `main` qui forcerait `dry_run = False` passerait
+  les trois tests sans que rien ne le signale.
+
+Report : à porter dans la fiche 02, la première qui touchera au corps de `main`.
+
+## Suites à donner (non bloquantes)
+
+- `cli.py:46` — `return int(exc.code) if isinstance(exc.code, int) else 0` : le repli sûr
+  d'un code de sortie inconnu est `1`, pas `0`. Aucun chemin ne produit ce cas aujourd'hui.
+- `cli.py:48` — `_ = args.dry_run` est du code mort qui ne sert qu'à éviter `F841`.
+- `README.md:14` — `.venv\Scripts\activate` (cmd Windows) dans un bloc balisé ` ```bash `.
+- Racine du dépôt — `tache-01-squelette-projet.md` et `FICHE-DE-TACHE.md` sont des
+  doublons divergents de `taches/tache-01-squelette-projet.md` et `taches/_GABARIT.md`,
+  résidus d'un paquet antérieur. À supprimer hors tâche.
+
 ## Journal de revue
 
-Rempli par Opus après exécution.
+Revue rendue par le sous-agent `reviseur` (contexte séparé, sans droit d'écriture), le
+2026-09-05, sur la branche `tache/squelette-projet`. Les huit critères d'acceptation ont
+été exécutés, non déduits.
 
-- **Verdict** :
-- **Motif** :
-- **Leçon d'aiguillage** :
+```
+Verdict : accepté
+Motif : les 8 critères d'acceptation exécutés et passants ; périmètre conforme aux
+        7 fichiers autorisés ; garde-fou --dry-run par défaut intact (cli.py:26).
+        Réserves non bloquantes : contrat « fonction unique » non tenu (cli.py:11),
+        mais contrat inécrivable tel quel ; repli d'erreur en 0 au lieu de 1
+        (cli.py:46) ; code mort (cli.py:48) ; garde-fou testé au niveau du parser
+        et non de main (test_cli.py:8). Revue faite sans git : diff réel,
+        suppressions et historique non vérifiés.
+Leçon d'aiguillage : bon agent. Tâche mécanique, contrat spécifié, erreurs
+        rattrapables par pytest/ruff. La friction vient de la fiche, pas du
+        partage : vérifier avant délégation que les critères d'acceptation sont
+        satisfaisables sous le contrat écrit. Corriger la fiche 01 (autoriser
+        les fonctions privées, ou exiger dry_run observable depuis main).
+```
+
+### Sorties vérifiées
+
+| Critère | Sortie |
+| --- | --- |
+| `pip install -e ".[dev]"` | `Successfully installed ... momentum-ultra-0.1.0`, code 0 |
+| `pytest` | `3 passed`, code 0 |
+| `ruff check .` | `All checks passed!`, code 0 |
+| `ruff format --check .` | `already formatted`, code 0 |
+| `momentum-ultra --version` | `0.1.0`, code 0 |
+| `momentum-ultra` (sans argument) | aide affichée, code 0 |
+| Aucun `import serial` | aucune occurrence |
+| Périmètre | 7 fichiers, tous autorisés |
+
+### Réserve de méthode
+
+La revue a tourné depuis une session distante, sans shell sur la machine de l'utilisateur.
+`git diff --name-only main...HEAD` n'a donc pas pu être lancé : le périmètre est établi
+sur l'inventaire des fichiers et leurs horodatages, pas sur un diff. Les fichiers
+supprimés et l'historique des commits n'ont pas été vérifiés.
