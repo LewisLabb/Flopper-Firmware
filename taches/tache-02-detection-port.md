@@ -46,27 +46,35 @@ from dataclasses import dataclass
 FLIPPER_VID = 0x0483
 FLIPPER_PID = 0x5740
 
+
 class FlipperDeviceError(Exception):
     """Base exception for Flipper device detection and connection issues."""
+
 
 class FlipperNotFoundError(FlipperDeviceError):
     """Raised when no Flipper Zero is detected on available serial ports."""
 
+
 class MultipleFlipperFoundError(FlipperDeviceError):
     """Raised when more than one Flipper Zero is connected."""
+
 
 class FlipperPortBusyError(FlipperDeviceError):
     """Raised when the Flipper Zero serial port is already in use by another application."""
 
+
 @dataclass(frozen=True)
 class FlipperDevice:
     """Represents a detected Flipper Zero device."""
+
     port: str
     description: str
     serial_number: str | None = None
 
+
 def find_flipper() -> FlipperDevice:
     """Find a connected Flipper Zero using USB VID and PID."""
+
 
 def is_port_available(port: str) -> bool:
     """Check if a serial port can be opened without conflict."""

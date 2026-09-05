@@ -6,6 +6,11 @@ import argparse
 import sys
 
 from momentum_ultra import __version__
+from momentum_ultra.device import (
+    FlipperDeviceError,
+    find_flipper,
+    is_port_available,
+)
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -26,6 +31,11 @@ def _build_parser() -> argparse.ArgumentParser:
         default=True,
         help="Exécute en mode simulation sans écrire sur l'appareil (activé par défaut).",
     )
+    parser.add_argument(
+        "--detect",
+        action="store_true",
+        help="Détecte le Flipper Zero connecté et vérifie la disponibilité du port série.",
+    )
     return parser
 
 
@@ -43,7 +53,24 @@ def main(argv: list[str] | None = None) -> int:
     try:
         args = parser.parse_args(argv)
     except SystemExit as exc:
-        return int(exc.code) if isinstance(exc.code, int) else 0
+        return int(exc.code) if isinstance(exc.code, int) else 1
 
-    _ = args.dry_run
+    if args.detect:
+        try:
+            device = find_flipper()
+        except FlipperDeviceError as err:
+            print(f"Erreur : {err}", file=sys.stderr)
+            return 1
+
+        if not is_port_available(device.port):
+            print(
+                f"Flipper Zero détecté sur {device.port}, mais le port est occupé "
+                "(qFlipper ou un autre outil est-il ouvert ?).",
+                file=sys.stderr,
+            )
+            return 1
+
+        print(f"Flipper Zero détecté sur {device.port}.")
+        return 0
+
     return 0

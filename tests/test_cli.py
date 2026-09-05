@@ -2,10 +2,25 @@
 
 from __future__ import annotations
 
+from unittest.mock import MagicMock, patch
+
 import pytest
+import serial
 
 from momentum_ultra import __version__
 from momentum_ultra.cli import _build_parser, main
+from momentum_ultra.device import FLIPPER_PID, FLIPPER_VID
+
+
+def _make_mock_flipper_port(device: str = "COM3") -> MagicMock:
+    """Create a mock Flipper serial port."""
+    port = MagicMock()
+    port.device = device
+    port.vid = FLIPPER_VID
+    port.pid = FLIPPER_PID
+    port.description = "Flipper Zero Virtual COM Port"
+    port.serial_number = "flip_12345"
+    return port
 
 
 def test_main_version(capsys: pytest.CaptureFixture[str]) -> None:
@@ -35,3 +50,38 @@ def test_dry_run_flag_parsing() -> None:
 
     args_dry_run = parser.parse_args(["--dry-run"])
     assert args_dry_run.dry_run is True
+
+
+def test_main_detect_success(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --detect when Flipper Zero is connected and port is available."""
+    mock_port = _make_mock_flipper_port("COM3")
+    with (
+        patch("serial.tools.list_ports.comports", return_value=[mock_port]),
+        patch("serial.Serial"),
+    ):
+        exit_code = main(["--detect"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "Flipper Zero détecté sur COM3." in captured.out
+
+
+def test_main_detect_not_found(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --detect when no Flipper Zero is connected."""
+    with patch("serial.tools.list_ports.comports", return_value=[]):
+        exit_code = main(["--detect"])
+        assert exit_code == 1
+        captured = capsys.readouterr()
+        assert "Aucun Flipper Zero détecté" in captured.err
+
+
+def test_main_detect_port_busy(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --detect when Flipper is found but port is locked by another program."""
+    mock_port = _make_mock_flipper_port("COM3")
+    with (
+        patch("serial.tools.list_ports.comports", return_value=[mock_port]),
+        patch("serial.Serial", side_effect=serial.SerialException("Access denied")),
+    ):
+        exit_code = main(["--detect"])
+        assert exit_code == 1
+        captured = capsys.readouterr()
+        assert "mais le port est occupé" in captured.err
