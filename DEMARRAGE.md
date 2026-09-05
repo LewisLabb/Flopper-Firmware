@@ -8,7 +8,7 @@ Décompresse ce paquet **à la racine de ton dossier `momentum-ultra`** (celui q
 
 Après décompression, ton dossier doit contenir :
 
-```
+```text
 momentum-ultra/
 ├── AGENTS.md                 ← règles communes aux deux agents
 ├── CLAUDE.md                 ← renvoi vers AGENTS.md pour Claude Code
@@ -27,7 +27,7 @@ momentum-ultra/
 
 Dans un terminal ouvert sur le dossier :
 
-```
+```bash
 git add .
 git commit -m "Base de gouvernance : AGENTS.md, reviseur, premiere fiche"
 git push

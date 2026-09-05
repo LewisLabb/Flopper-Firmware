@@ -22,7 +22,7 @@ Conformément au Pilier 3 du brief Momentum Ultra (« Refonte de la saisie — C
 
 Fichiers à créer ou modifier, et eux seuls :
 
-```
+```text
 src/momentum_ultra/dictionaries.py
 src/momentum_ultra/installer.py
 tests/test_dictionaries.py

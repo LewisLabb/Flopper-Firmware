@@ -22,7 +22,7 @@ Conformément au Pilier 6 du brief Momentum Ultra (« Responsable par défaut »
 
 Fichiers à créer ou modifier, et eux seuls :
 
-```
+```text
 src/momentum_ultra/regions.py
 src/momentum_ultra/cli.py
 src/momentum_ultra/installer.py

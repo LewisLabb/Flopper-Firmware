@@ -22,7 +22,7 @@ Le dépôt est vide. Il faut la structure de base d'un projet Python installable
 
 Fichiers à créer, et eux seuls :
 
-```
+```text
 .gitignore
 README.md
 pyproject.toml
@@ -41,6 +41,7 @@ taches/.gitkeep
 ## Contrat
 
 **`pyproject.toml`**
+
 - Nom du paquet : `momentum-ultra` · version `0.1.0` · Python `>=3.11`
 - Build backend : `setuptools`, disposition `src/`
 - Dépendance : `pyserial`
@@ -48,9 +49,11 @@ taches/.gitkeep
 - Script console : `momentum-ultra = "momentum_ultra.cli:main"`
 
 **`src/momentum_ultra/__init__.py`**
+
 - Expose `__version__: str = "0.1.0"`
 
 **`src/momentum_ultra/cli.py`**
+
 - Fonction unique : `def main(argv: list[str] | None = None) -> int:`
 - Utilise `argparse`. Deux options seulement :
   - `--version` — affiche la version, retourne `0`
@@ -60,6 +63,7 @@ taches/.gitkeep
 - Les messages affichés sont en français
 
 **`tests/test_cli.py`** — au minimum ces trois tests :
+
 - `main(["--version"])` retourne `0`
 - `main([])` retourne `0`
 - l'analyse de `[]` produit `dry_run is True`, et `["--no-dry-run"]` produit `dry_run is False`
@@ -123,7 +127,7 @@ Revue rendue par le sous-agent `reviseur` (contexte séparé, sans droit d'écri
 2026-09-05, sur la branche `tache/squelette-projet`. Les huit critères d'acceptation ont
 été exécutés, non déduits.
 
-```
+```text
 Verdict : accepté
 Motif : les 8 critères d'acceptation exécutés et passants ; périmètre conforme aux
         7 fichiers autorisés ; garde-fou --dry-run par défaut intact (cli.py:26).

@@ -22,7 +22,7 @@ Conformément au Pilier 4 du brief (« Bundle partageable »), permettre à un u
 
 Fichiers à créer ou modifier, et eux seuls :
 
-```
+```text
 src/momentum_ultra/bundle.py
 src/momentum_ultra/cli.py
 tests/test_bundle.py
