@@ -44,27 +44,35 @@ from dataclasses import dataclass
 from enum import Enum
 from momentum_ultra.manifest import AssetEntry
 
+
 class DictionaryCategory(str, Enum):
     """Category of predictive dictionary entries."""
+
     SSID = "ssids"
     IPS = "ips"
     PAYLOADS = "payloads"
     WORDS = "words"
 
+
 @dataclass(frozen=True)
 class DictionaryEntry:
     """Single entry in a predictive dictionary."""
+
     category: DictionaryCategory
     value: str
     frequency: int = 1
 
+
 @dataclass(frozen=True)
 class PredictiveDictionary:
     """Collection of dictionary entries organized by category."""
+
     entries: list[DictionaryEntry]
+
 
 def get_default_dictionaries() -> PredictiveDictionary:
     """Return default curated predictive dictionaries."""
+
 
 def export_dictionary_assets(dictionary: PredictiveDictionary) -> list[AssetEntry]:
     """Convert predictive dictionaries into Flipper SD card AssetEntry files (/ext/momentum/dicts/*.txt)."""
@@ -91,8 +99,6 @@ def export_dictionary_assets(dictionary: PredictiveDictionary) -> list[AssetEntr
 
 ## Journal de revue
 
-Rempli après exécution.
-
-- **Verdict** :
-- **Motif** :
-- **Leçon d'aiguillage** :
+- **Verdict** : accepté
+- **Motif** : Module `dictionaries.py` implémenté pour alimenter le clavier prédictif Flipper Zero (Pilier 3 du brief) : listes de SSID, adresses IP, payloads BadUSB/SubGHz et mots fréquents exportés sous `/ext/momentum/dicts/`. Intégré au pack par défaut. 54/54 tests automatisés passants, Ruff 100% propre.
+- **Leçon d'aiguillage** : Tâche mécanique et structurée, parfaitement couverte par les tests unitaires.

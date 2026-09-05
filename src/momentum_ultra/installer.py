@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from momentum_ultra.dictionaries import (
+    export_dictionary_assets,
+    get_default_dictionaries,
+)
 from momentum_ultra.flipper_client import FlipperClient
 from momentum_ultra.manifest import (
     ActionType,
@@ -23,6 +27,7 @@ def get_default_pack(region: RegionCode | str = RegionCode.EU) -> PackManifest:
     """Return the built-in curated Momentum Ultra pack configured for a region."""
     profile = get_region_profile(region)
     region_data = export_region_config(profile)
+    dict_assets = export_dictionary_assets(get_default_dictionaries())
 
     return PackManifest(
         name="Momentum-Ultra-Curated-Pack",
@@ -59,6 +64,7 @@ def get_default_pack(region: RegionCode | str = RegionCode.EU) -> PackManifest:
                 destination_path="/ext/dolphin/momentum_boot.bm",
                 content=b"MOMENTUM_ANIMATION_DATA",
             ),
+            *dict_assets,
         ],
         settings={
             "profile_name": "Momentum Ultra Default",
