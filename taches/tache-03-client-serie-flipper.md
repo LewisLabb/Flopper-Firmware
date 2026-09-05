@@ -43,21 +43,27 @@ from dataclasses import dataclass
 
 DEFAULT_BACKUP_DIR = "/ext/backup"
 
+
 class FlipperClientError(Exception):
     """Base exception for Flipper serial client communication."""
+
 
 class FlipperCommandError(FlipperClientError):
     """Raised when a CLI command returns an error from Flipper Zero."""
 
+
 class FlipperTimeoutError(FlipperClientError):
     """Raised when communication with Flipper Zero times out."""
+
 
 @dataclass(frozen=True)
 class StorageItem:
     """Represents a file or directory on the Flipper SD card."""
+
     name: str
     is_dir: bool
     size: int = 0
+
 
 class FlipperClient:
     """Serial communication client for Flipper Zero CLI shell."""
@@ -89,7 +95,9 @@ class FlipperClient:
     def write_file(self, path: str, content: bytes) -> bool:
         """Write bytes to a file on the SD card (no-op in dry_run)."""
 
-    def backup_item(self, source_path: str, backup_dir: str = DEFAULT_BACKUP_DIR) -> str:
+    def backup_item(
+        self, source_path: str, backup_dir: str = DEFAULT_BACKUP_DIR
+    ) -> str:
         """Move an existing file or directory to the backup folder (never delete)."""
 ```
 
@@ -123,8 +131,6 @@ Règles de comportement :
 
 ## Journal de revue
 
-Rempli après exécution.
-
-- **Verdict** :
-- **Motif** :
-- **Leçon d'aiguillage** :
+- **Verdict** : accepté
+- **Motif** : Client série Flipper Zero implémenté avec synchronisation de prompt CLI, gestion de `list_dir`, `mkdir`, `write_file`, et `backup_item` (`storage rename`). Garde-fous respectés à 100% : `--dry-run` activé par défaut, aucune commande `storage remove` dans le code, 26/26 tests unitaires passants avec mocks de flux série, Ruff 100% propre.
+- **Leçon d'aiguillage** : Tâche de protocole et flux séquentiel exécutée et vérifiée mécaniquement par tests d'intégration simulés.
