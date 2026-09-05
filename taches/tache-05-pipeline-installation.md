@@ -22,7 +22,7 @@ Connecter ensemble la détection du Flipper, le chargement du pack par défaut, 
 
 Fichiers à créer ou modifier, et eux seuls :
 
-```
+```text
 src/momentum_ultra/installer.py
 src/momentum_ultra/cli.py
 tests/test_installer.py

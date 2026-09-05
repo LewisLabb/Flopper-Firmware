@@ -22,7 +22,7 @@ Fournir un client de communication Python pour interagir avec le shell CLI du Fl
 
 Fichiers à créer ou modifier, et eux seuls :
 
-```
+```text
 src/momentum_ultra/flipper_client.py
 tests/test_flipper_client.py
 taches/tache-03-client-serie-flipper.md
@@ -102,13 +102,14 @@ class FlipperClient:
 ```
 
 Règles de comportement :
+
 1. **Mode simulation (`dry_run=True`)** :
    - Les opérations de lecture (`list_dir`) s'exécutent normalement.
    - Les opérations d'écriture (`mkdir`, `write_file`, `backup_item`) n'envoient aucune commande modifiante sur le port série et retournent un succès simulé.
 2. **Garde-fou suppression** :
    - Aucune commande `storage remove` n'existe dans le client. Tout remplacement passe obligatoirement par `backup_item` (`storage rename`).
 3. **Synchronisation du prompt** :
-   - Le shell Flipper affiche le prompt `>: `. Le client consomme les réponses jusqu'au prompt.
+   - Le shell Flipper affiche le prompt `>:`. Le client consomme les réponses jusqu'au prompt.
 4. **Gestion des erreurs** :
    - Messages d'erreur en français pour les exceptions utilisateur. Code et docstrings en anglais.
 

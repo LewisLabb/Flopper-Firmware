@@ -22,7 +22,7 @@ Permettre à l'outil de charger et valider des manifestes de configuration défi
 
 Fichiers à créer ou modifier, et eux seuls :
 
-```
+```text
 src/momentum_ultra/manifest.py
 tests/test_manifest.py
 taches/tache-04-gestion-manifestes.md
@@ -104,6 +104,7 @@ def generate_install_plan(
 ```
 
 Règles de comportement :
+
 1. `load_manifest_from_dict(data)` :
    - Vérifie la présence des champs obligatoires (`name`, `version`).
    - Lève `ValueError` si des champs requis manquent ou si les formats sont invalides.

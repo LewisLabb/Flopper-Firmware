@@ -22,7 +22,7 @@ Pour préparer le Flipper, l'outil doit être capable de détecter automatiqueme
 
 Fichiers à créer ou modifier, et eux seuls :
 
-```
+```text
 src/momentum_ultra/device.py
 src/momentum_ultra/cli.py
 tests/test_device.py
