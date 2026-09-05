@@ -38,6 +38,12 @@ Les signatures, formats de données et interfaces à respecter, écrits noir sur
 
 Cette section est ce qui permet à deux agents de travailler sans se contredire.
 
+**Avant de déléguer, relire le contrat et les critères d'acceptation ensemble : chaque
+critère doit être satisfaisable sous le contrat tel qu'il est écrit.** Un contrat qui
+interdit ce qu'un critère exige force l'agent à trancher seul — et il tranchera, au lieu
+de s'arrêter. Vérifier en particulier qu'un critère portant sur un état interne dispose
+d'un moyen public de l'observer.
+
 ## Critères d'acceptation
 
 Conditions vérifiables, pas des intentions. Chacune doit pouvoir se répondre par oui ou non.
@@ -45,6 +51,10 @@ Conditions vérifiables, pas des intentions. Chacune doit pouvoir se répondre p
 - [ ] `pytest` passe
 - [ ] `ruff check .` ne signale rien
 - [ ] …
+
+Un critère qui vérifie un garde-fou doit le vérifier **par l'interface publique**, jamais
+par un rouage interne : tester le parser plutôt que la commande laisse passer un garde-fou
+désactivé plus loin dans la chaîne.
 
 ## Conditions d'arrêt
 
