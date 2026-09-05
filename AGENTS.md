@@ -14,7 +14,7 @@ Aucune dépendance supplémentaire sans justification écrite dans la fiche de t
 
 ## Commandes
 
-```
+```bash
 python -m venv .venv          # créer l'environnement
 .venv\Scripts\activate        # l'activer (Windows)
 pip install -e ".[dev]"       # installer le projet et ses outils
