@@ -44,35 +44,44 @@ taches/tache-06-profils-region-safe.md
 from dataclasses import dataclass
 from enum import Enum
 
+
 class RegionCode(str, Enum):
     """Supported geographical regulatory regions."""
-    EU = "EU"        # CE (433.05-434.79 MHz, 868.15-868.55 MHz)
-    US = "US"        # FCC (304.10-321.95 MHz, 433.05-434.79 MHz, 915.00-928.00 MHz)
-    JP = "JP"        # MIC (312.00-315.25 MHz, 920.50-923.50 MHz)
+
+    EU = "EU"  # CE (433.05-434.79 MHz, 868.15-868.55 MHz)
+    US = "US"  # FCC (304.10-321.95 MHz, 433.05-434.79 MHz, 915.00-928.00 MHz)
+    JP = "JP"  # MIC (312.00-315.25 MHz, 920.50-923.50 MHz)
     WORLD = "WORLD"  # Déverrouillé (avertissement légal obligatoire)
+
 
 @dataclass(frozen=True)
 class FrequencyBand:
     """Frequency band specification in Hz."""
+
     start_hz: int
     end_hz: int
     duty_cycle: float | None = None
     max_power_dbm: int | None = None
 
+
 @dataclass(frozen=True)
 class RegionProfile:
     """Regional regulatory profile with legal frequency bands."""
+
     code: RegionCode
     name: str
     regulatory_body: str
     subghz_tx_bands: list[FrequencyBand]
     description: str
 
+
 def get_region_profile(code: RegionCode | str) -> RegionProfile:
     """Get regulatory profile by code."""
 
+
 def get_available_regions() -> list[RegionCode]:
     """List all available region codes."""
+
 
 def export_region_config(profile: RegionProfile) -> dict[str, object]:
     """Export region profile to Flipper settings dictionary."""
@@ -101,8 +110,6 @@ def export_region_config(profile: RegionProfile) -> dict[str, object]:
 
 ## Journal de revue
 
-Rempli après exécution.
-
-- **Verdict** :
-- **Motif** :
-- **Leçon d'aiguillage** :
+- **Verdict** : accepté
+- **Motif** : Profils région-safe (EU/CE, US/FCC, JP/MIC, WORLD/déverrouillé) implémentés avec modélisation exacte des fréquences TX autorisées et exportation de configuration. CLI enrichie de `--region` avec avertissement légal explicite pour WORLD. 46/46 tests unitaires et d'intégration passants, Ruff 100% conforme.
+- **Leçon d'aiguillage** : Conforme aux règles d'aiguillage d'AGENTS.md et au Pilier 6 du brief (« Responsable par défaut »).

@@ -14,6 +14,7 @@ from momentum_ultra.device import (
 from momentum_ultra.flipper_client import FlipperClient, FlipperClientError
 from momentum_ultra.installer import execute_install_plan, get_default_pack
 from momentum_ultra.manifest import generate_install_plan
+from momentum_ultra.regions import RegionCode, get_available_regions, get_region_profile
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -52,6 +53,13 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Confirme automatiquement l'écriture sans invite interactive.",
     )
+    valid_regions = [r.value for r in get_available_regions()]
+    parser.add_argument(
+        "--region",
+        default="EU",
+        choices=valid_regions + [r.lower() for r in valid_regions],
+        help="Profil régional pour les fréquences radio (EU, US, JP, WORLD). Par défaut : EU.",
+    )
     return parser
 
 
@@ -75,7 +83,11 @@ def main(argv: list[str] | None = None) -> int:
         return _handle_detect()
 
     if args.install:
-        return _handle_install(dry_run=args.dry_run, auto_confirm=args.yes)
+        return _handle_install(
+            dry_run=args.dry_run,
+            auto_confirm=args.yes,
+            region_str=args.region,
+        )
 
     return 0
 
@@ -100,8 +112,14 @@ def _handle_detect() -> int:
     return 0
 
 
-def _handle_install(dry_run: bool, auto_confirm: bool) -> int:
+def _handle_install(dry_run: bool, auto_confirm: bool, region_str: str) -> int:
     """Handle the --install / --prepare workflow."""
+    try:
+        profile = get_region_profile(region_str)
+    except ValueError as err:
+        print(f"Erreur : {err}", file=sys.stderr)
+        return 1
+
     try:
         device = find_flipper()
     except FlipperDeviceError as err:
@@ -115,6 +133,12 @@ def _handle_install(dry_run: bool, auto_confirm: bool) -> int:
         )
         return 1
 
+    if profile.code == RegionCode.WORLD:
+        print(
+            "\n[Avertissement Légal] Le profil WORLD déverrouille les restrictions fréquentielles."
+            "\nVous êtes légalement responsable des émissions radio selon votre juridiction locale.\n"
+        )
+
     if not dry_run and not auto_confirm:
         confirm = input(
             f"Attention : vous allez écrire sur le Flipper Zero ({device.port}). Continuer ? [o/N] "
@@ -124,9 +148,11 @@ def _handle_install(dry_run: bool, auto_confirm: bool) -> int:
             return 0
 
     mode_label = "SIMULATION (--dry-run)" if dry_run else "ÉCRITURE RÉELLE"
-    print(f"\n--- Préparation de Momentum Ultra sur {device.port} [{mode_label}] ---")
+    print(
+        f"\n--- Préparation de Momentum Ultra ({profile.name}) sur {device.port} [{mode_label}] ---"
+    )
 
-    pack = get_default_pack()
+    pack = get_default_pack(region=profile.code)
     plan = generate_install_plan(pack, backup_existing=True)
 
     try:
@@ -144,6 +170,7 @@ def _handle_install(dry_run: bool, auto_confirm: bool) -> int:
 
     print("\n" + "=" * 60)
     print("Préparation terminée avec succès !")
+    print(f"Région configurée : {profile.name}")
     print("Conseils pour le premier démarrage :")
     print(" 1. Redémarrez votre Flipper Zero (touches Retour + Gauche).")
     print(" 2. Retrouvez vos applications dans le menu Applications.")

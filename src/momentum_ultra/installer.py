@@ -12,14 +12,22 @@ from momentum_ultra.manifest import (
     PackManifest,
     PlanAction,
 )
+from momentum_ultra.regions import (
+    RegionCode,
+    export_region_config,
+    get_region_profile,
+)
 
 
-def get_default_pack() -> PackManifest:
-    """Return the built-in curated Momentum Ultra pack."""
+def get_default_pack(region: RegionCode | str = RegionCode.EU) -> PackManifest:
+    """Return the built-in curated Momentum Ultra pack configured for a region."""
+    profile = get_region_profile(region)
+    region_data = export_region_config(profile)
+
     return PackManifest(
         name="Momentum-Ultra-Curated-Pack",
         version="1.0.0",
-        description="Pack de démarrage optimisé avec applications curées, animations et profil Momentum.",
+        description=f"Pack de démarrage optimisé avec applications curées et profil {profile.name}.",
         apps=[
             AppEntry(
                 name="ESP32 WiFi Scanner",
@@ -57,6 +65,7 @@ def get_default_pack() -> PackManifest:
             "dark_mode": True,
             "animations_enabled": True,
             "log_level": "info",
+            "region": region_data,
         },
     )
 

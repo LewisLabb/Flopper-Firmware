@@ -128,6 +128,36 @@ def test_main_install_dry_run_default(capsys: pytest.CaptureFixture[str]) -> Non
         assert "Conseils pour le premier démarrage" in captured.out
 
 
+def test_main_install_with_region_us(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --install with --region US."""
+    mock_port = _make_mock_flipper_port("COM3")
+    mock_serial = MockSerialClient()
+    with (
+        patch("serial.tools.list_ports.comports", return_value=[mock_port]),
+        patch("serial.Serial", return_value=mock_serial),
+    ):
+        exit_code = main(["--install", "--region", "US"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "États-Unis" in captured.out
+
+
+def test_main_install_with_region_world_warning(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Test --install with --region WORLD displays legal notice."""
+    mock_port = _make_mock_flipper_port("COM3")
+    mock_serial = MockSerialClient()
+    with (
+        patch("serial.tools.list_ports.comports", return_value=[mock_port]),
+        patch("serial.Serial", return_value=mock_serial),
+    ):
+        exit_code = main(["--install", "--region", "WORLD"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "Avertissement Légal" in captured.out
+
+
 def test_main_install_no_dry_run_cancelled(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
