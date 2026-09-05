@@ -115,4 +115,3 @@ def export_captures_catalog(report: SyncReport, destination_dir: str | Path) -> 
 - **Verdict** : accepté
 - **Motif** : Module `sync.py` de synchronisation locale et d'inventaire JSON des captures (`.sub`, `.nfc`, `.rfid`, `.ir`, `.ibtn`, `.badusb`) implémenté sans altération des données SD. Option CLI `--backup-captures` intégrée avec refactorisation propre de `cli.py` (275 lignes). 73/73 tests passants, Ruff 100% propre.
 - **Leçon d'aiguillage** : Alignement complet avec le Pilier 2 du brief (« Workflow Capture & Organisation des Fichiers »).
-

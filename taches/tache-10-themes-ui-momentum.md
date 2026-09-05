@@ -119,4 +119,3 @@ def get_theme_assets(profile: ThemeProfile) -> list[AssetEntry]:
 - **Verdict** : accepté
 - **Motif** : Module `theme.py` complet avec 4 profils de thèmes et réglages de status bar implémentés. Option CLI `--theme` ajoutée avec injection dans `/ext/settings/momentum_ui.json` et les assets `/ext/dolphin/`. 68/68 tests automatisés passants, Ruff 100% propre.
 - **Leçon d'aiguillage** : Conforme au Pilier 1 du brief (« Architecture UI & Ergonomie Immédiate »).
-
