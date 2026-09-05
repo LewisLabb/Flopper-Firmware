@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "momentum-ultra"
+version = "0.1.0"
+description = "Outil de préparation post-flash pour Flipper Zero sous Momentum"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pyserial",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+]
+
+[project.scripts]
+momentum-ultra = "momentum_ultra.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
