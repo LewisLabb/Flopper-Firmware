@@ -8,6 +8,7 @@ import sys
 from momentum_ultra import __version__
 from momentum_ultra.bundle import BundleError, export_bundle, import_bundle
 from momentum_ultra.device import (
+    FlipperDevice,
     FlipperDeviceError,
     find_flipper,
     is_port_available,
@@ -20,6 +21,7 @@ from momentum_ultra.modules import (
     get_default_module_configs,
 )
 from momentum_ultra.regions import RegionCode, get_available_regions, get_region_profile
+from momentum_ultra.sync import sync_captures_to_local
 from momentum_ultra.theme import get_available_themes, get_theme_profile
 
 
@@ -30,63 +32,56 @@ def _build_parser() -> argparse.ArgumentParser:
         description="Outil de préparation post-flash pour Flipper Zero sous Momentum.",
     )
     parser.add_argument(
-        "--version",
-        action="version",
-        version=__version__,
-        help="Affiche la version du programme et quitte.",
+        "--version", action="version", version=__version__, help="Affiche la version."
     )
     parser.add_argument(
         "--dry-run",
         action=argparse.BooleanOptionalAction,
         default=True,
-        help="Exécute en mode simulation sans écrire sur l'appareil (activé par défaut).",
+        help="Mode simulation (défaut: True).",
     )
     parser.add_argument(
-        "--detect",
-        action="store_true",
-        help="Détecte le Flipper Zero connecté et vérifie la disponibilité du port série.",
+        "--detect", action="store_true", help="Vérifie la connexion du Flipper Zero."
     )
     parser.add_argument(
         "--diagnose-modules",
         action="store_true",
-        help="Diagnostique et affiche les modules d'extension externes connectés au GPIO.",
+        help="Diagnostique les modules GPIO connectés.",
     )
     parser.add_argument(
         "--install",
         "--prepare",
         dest="install",
         action="store_true",
-        help="Installe le pack Momentum Ultra et configure le Flipper Zero.",
+        help="Installe le pack Momentum Ultra.",
     )
     parser.add_argument(
-        "-y",
-        "--yes",
-        action="store_true",
-        help="Confirme automatiquement l'écriture sans invite interactive.",
+        "-y", "--yes", action="store_true", help="Confirme automatiquement l'écriture."
     )
     valid_regions = [r.value for r in get_available_regions()]
     parser.add_argument(
         "--region",
         default="EU",
         choices=valid_regions + [r.lower() for r in valid_regions],
-        help="Profil régional pour les fréquences radio (EU, US, JP, WORLD). Par défaut : EU.",
+        help="Profil régional radio (EU, US, JP, WORLD).",
     )
     valid_themes = [t.value for t in get_available_themes()]
     parser.add_argument(
         "--theme",
         default="default",
         choices=valid_themes + [t.lower() for t in valid_themes],
-        help="Thème visuel Momentum (default, dark_stealth, retro_gamer, cyberpunk). Par défaut : default.",
+        help="Thème visuel Momentum.",
     )
     parser.add_argument(
-        "--bundle",
-        metavar="FICHIER",
-        help="Chemin vers un bundle personnalisé (.tar.gz ou .json) à installer.",
+        "--bundle", metavar="FICHIER", help="Chemin vers un bundle personnalisé."
     )
     parser.add_argument(
-        "--export-bundle",
-        metavar="FICHIER",
-        help="Exporte le pack Momentum Ultra vers une archive partageable (.tar.gz).",
+        "--export-bundle", metavar="FICHIER", help="Exporte vers un bundle .tar.gz."
+    )
+    parser.add_argument(
+        "--backup-captures",
+        metavar="DOSSIER",
+        help="Sauvegarde les captures vers le dossier local.",
     )
     return parser
 
@@ -94,10 +89,8 @@ def _build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     """Run the momentum-ultra command-line interface."""
     parser = _build_parser()
-
     if argv is None:
         argv = sys.argv[1:]
-
     if len(argv) == 0:
         parser.print_help()
         return 0
@@ -108,28 +101,53 @@ def main(argv: list[str] | None = None) -> int:
         return int(exc.code) if isinstance(exc.code, int) else 1
 
     if args.export_bundle:
-        return _handle_export_bundle(
-            destination=args.export_bundle,
-            region_str=args.region,
-            theme_str=args.theme,
-        )
-
+        return _handle_export_bundle(args.export_bundle, args.region, args.theme)
+    if args.backup_captures:
+        return _handle_backup_captures(args.backup_captures, args.dry_run)
     if args.detect:
         return _handle_detect()
-
     if args.diagnose_modules:
         return _handle_diagnose_modules()
-
     if args.install:
         return _handle_install(
-            dry_run=args.dry_run,
-            auto_confirm=args.yes,
-            region_str=args.region,
-            theme_str=args.theme,
-            bundle_path=args.bundle,
+            args.dry_run, args.yes, args.region, args.theme, args.bundle
         )
-
     return 0
+
+
+def _get_connected_device() -> FlipperDevice | None:
+    """Find and validate connected Flipper Zero availability."""
+    try:
+        device = find_flipper()
+    except FlipperDeviceError as err:
+        print(f"Erreur : {err}", file=sys.stderr)
+        return None
+
+    if not is_port_available(device.port):
+        print(
+            f"Flipper Zero détecté sur {device.port}, mais le port est occupé "
+            "(qFlipper ou un autre outil est-il ouvert ?).",
+            file=sys.stderr,
+        )
+        return None
+    return device
+
+
+def _handle_backup_captures(destination: str, dry_run: bool) -> int:
+    """Handle capture synchronization to local destination folder."""
+    device = _get_connected_device()
+    if not device:
+        return 1
+    try:
+        with FlipperClient(port=device.port, dry_run=dry_run) as client:
+            report = sync_captures_to_local(client=client, destination_dir=destination)
+            print(
+                f"Sauvegarde terminée : {len(report.synced_items)} fichiers synchronisés dans '{report.destination_dir}'."
+            )
+            return 0
+    except (FlipperClientError, OSError) as err:
+        print(f"Erreur lors de la synchronisation : {err}", file=sys.stderr)
+        return 1
 
 
 def _handle_export_bundle(
@@ -148,37 +166,17 @@ def _handle_export_bundle(
 
 def _handle_detect() -> int:
     """Handle the --detect command flow."""
-    try:
-        device = find_flipper()
-    except FlipperDeviceError as err:
-        print(f"Erreur : {err}", file=sys.stderr)
+    device = _get_connected_device()
+    if not device:
         return 1
-
-    if not is_port_available(device.port):
-        print(
-            f"Flipper Zero détecté sur {device.port}, mais le port est occupé "
-            "(qFlipper ou un autre outil est-il ouvert ?).",
-            file=sys.stderr,
-        )
-        return 1
-
     print(f"Flipper Zero détecté sur {device.port}.")
     return 0
 
 
 def _handle_diagnose_modules() -> int:
     """Handle the --diagnose-modules command flow."""
-    try:
-        device = find_flipper()
-    except FlipperDeviceError as err:
-        print(f"Erreur : {err}", file=sys.stderr)
-        return 1
-
-    if not is_port_available(device.port):
-        print(
-            f"Flipper Zero détecté sur {device.port}, mais le port est inaccessible.",
-            file=sys.stderr,
-        )
+    device = _get_connected_device()
+    if not device:
         return 1
 
     print(f"\n--- Diagnostic des modules GPIO sur {device.port} ---")
@@ -190,9 +188,6 @@ def _handle_diagnose_modules() -> int:
 
             if not modules:
                 print("Aucun module externe détecté sur le connecteur GPIO.")
-                print(
-                    "Note : Les modules CC1101, nRF24 et ESP32 sont configurables dans les réglages."
-                )
             else:
                 print(f"Modules détectés ({len(modules)}) :")
                 for mod in modules:
@@ -230,17 +225,8 @@ def _handle_install(
     else:
         pack = get_default_pack(region=profile.code, theme=theme_profile.name)
 
-    try:
-        device = find_flipper()
-    except FlipperDeviceError as err:
-        print(f"Erreur : {err}", file=sys.stderr)
-        return 1
-
-    if not is_port_available(device.port):
-        print(
-            f"Flipper Zero détecté sur {device.port}, mais le port est inaccessible.",
-            file=sys.stderr,
-        )
+    device = _get_connected_device()
+    if not device:
         return 1
 
     if profile.code == RegionCode.WORLD and not bundle_path:
@@ -263,7 +249,6 @@ def _handle_install(
     )
 
     plan = generate_install_plan(pack, backup_existing=True)
-
     try:
         with FlipperClient(port=device.port, dry_run=dry_run) as client:
             execute_install_plan(

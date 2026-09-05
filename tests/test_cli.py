@@ -42,7 +42,8 @@ class MockSerialClient:
 
     def read(self, size: int = 1) -> bytes:
         """Return prompt marker with optional response text."""
-        if self.response_text:
+        last_written = self.written[-1] if self.written else b""
+        if self.response_text and last_written not in (b"\r\n", b""):
             out = f"{self.response_text}\r\n>: ".encode()
             self.response_text = ""
             return out
@@ -264,3 +265,20 @@ def test_main_install_with_theme(capsys: pytest.CaptureFixture[str]) -> None:
         assert exit_code == 0
         captured = capsys.readouterr()
         assert "Dark Stealth" in captured.out
+
+
+def test_main_backup_captures(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test --backup-captures command."""
+    mock_port = _make_mock_flipper_port("COM3")
+    mock_serial = MockSerialClient(response_text="[F] key.sub 128B")
+    dest_dir = tmp_path / "captures_out"
+    with (
+        patch("serial.tools.list_ports.comports", return_value=[mock_port]),
+        patch("serial.Serial", return_value=mock_serial),
+    ):
+        exit_code = main(["--backup-captures", str(dest_dir)])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "Sauvegarde terminée" in captured.out

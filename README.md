@@ -13,6 +13,7 @@ Outil de préparation et d'onboarding complet pour Flipper Zero sous firmware Mo
 - 🌍 **Profils région-safe (P0)** : Sélection de région (`EU / CE`, `US / FCC`, `JP / MIC`, `WORLD`) avec configuration responsable des bandes de fréquences d'émission.
 - ⌨️ **Dictionnaires pour clavier prédictif (P1)** : Déploiement des pré-saisies (SSID, adresses IP de lab, commandes BadUSB, mots fréquents) sous `/ext/momentum/dicts/`.
 - 🎨 **Thèmes visuels & personnalisation UI (P0)** : Sélection de styles d'affichage (`default`, `dark_stealth`, `retro_gamer`, `cyberpunk`) et configuration de la barre d'état.
+- 💾 **Synchronisation des captures (P1)** : Sauvegarde locale des fichiers SubGHz, NFC, RFID, IR, BadUSB avec inventaire JSON.
 - 📦 **Bundles autoinstall partageables (P1)** : Export et import de packs d'installation complets au format `.tar.gz` ou `.json`.
 - 🚀 **Assistant de premier démarrage** : Conseils guidés et suivi de progression en français.
 
@@ -34,6 +35,9 @@ momentum-ultra --install
 # Lancer l'installation avec un thème spécifique et un profil régional
 momentum-ultra --install --theme dark_stealth --region EU --no-dry-run
 
+# Sauvegarder les captures du Flipper vers un dossier local
+momentum-ultra --backup-captures ./mes_captures
+
 # Exporter le pack complet vers un bundle partageable
 momentum-ultra --export-bundle mon_pack.tar.gz
 
@@ -44,6 +48,6 @@ momentum-ultra --install --bundle mon_pack.tar.gz --no-dry-run
 ## Développement et tests
 
 ```bash
-pytest                        # 68 tests automatisés (couche série 100% simulée)
+pytest                        # 73 tests automatisés (couche série 100% simulée)
 ruff check . && ruff format . # lint et formatage
 ```
