@@ -43,11 +43,14 @@ taches/tache-07-bundles-partageables.md
 from pathlib import Path
 from momentum_ultra.manifest import PackManifest
 
+
 class BundleError(Exception):
     """Base exception for bundle packaging and extraction errors."""
 
+
 def export_bundle(manifest: PackManifest, destination: str | Path) -> Path:
     """Package a PackManifest and its embedded contents into a shareable .tar.gz archive."""
+
 
 def import_bundle(bundle_path: str | Path) -> PackManifest:
     """Load, validate and unpack a PackManifest from a bundle archive."""
@@ -76,8 +79,6 @@ def import_bundle(bundle_path: str | Path) -> PackManifest:
 
 ## Journal de revue
 
-Rempli après exécution.
-
-- **Verdict** :
-- **Motif** :
-- **Leçon d'aiguillage** :
+- **Verdict** : accepté
+- **Motif** : Module `bundle.py` d'exportation et d'importation d'archives compressées `.tar.gz` et manifestes `.json` avec validation d'intégrité implémenté. Options CLI `--export-bundle` et `--bundle` opérationnelles et testées. 52/52 tests automatisés passants, Ruff 100% propre.
+- **Leçon d'aiguillage** : Alignement complet avec le Pilier 4 du brief (« Bundle partageable »).

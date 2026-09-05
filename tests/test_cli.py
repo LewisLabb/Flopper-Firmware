@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 import serial
 
 from momentum_ultra import __version__
+from momentum_ultra.bundle import export_bundle
 from momentum_ultra.cli import _build_parser, main
 from momentum_ultra.device import FLIPPER_PID, FLIPPER_VID
+from momentum_ultra.manifest import AppEntry, PackManifest
 
 
 def _make_mock_flipper_port(device: str = "COM3") -> MagicMock:
@@ -190,3 +193,41 @@ def test_main_install_no_dry_run_yes_flag(
         captured = capsys.readouterr()
         assert "ÉCRITURE RÉELLE" in captured.out
         assert "Préparation terminée avec succès !" in captured.out
+
+
+def test_main_export_bundle(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --export-bundle writes a tar.gz bundle."""
+    dest = tmp_path / "exported.tar.gz"
+    exit_code = main(["--export-bundle", str(dest)])
+    assert exit_code == 0
+    assert dest.exists()
+    captured = capsys.readouterr()
+    assert "exporté avec succès" in captured.out
+
+
+def test_main_install_custom_bundle(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Test --install with --bundle using a custom pack."""
+    custom_pack = PackManifest(
+        name="custom-pack-xyz",
+        version="3.0.0",
+        apps=[
+            AppEntry(name="AppX", category="Tools", filename="x.fap", content=b"123")
+        ],
+    )
+    bundle_file = tmp_path / "custom.tar.gz"
+    export_bundle(custom_pack, bundle_file)
+
+    mock_port = _make_mock_flipper_port("COM3")
+    mock_serial = MockSerialClient()
+    with (
+        patch("serial.tools.list_ports.comports", return_value=[mock_port]),
+        patch("serial.Serial", return_value=mock_serial),
+    ):
+        exit_code = main(["--install", "--bundle", str(bundle_file)])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "custom-pack-xyz" in captured.out
+        assert "Préparation terminée avec succès" in captured.out

@@ -6,6 +6,7 @@ import argparse
 import sys
 
 from momentum_ultra import __version__
+from momentum_ultra.bundle import BundleError, export_bundle, import_bundle
 from momentum_ultra.device import (
     FlipperDeviceError,
     find_flipper,
@@ -60,6 +61,16 @@ def _build_parser() -> argparse.ArgumentParser:
         choices=valid_regions + [r.lower() for r in valid_regions],
         help="Profil régional pour les fréquences radio (EU, US, JP, WORLD). Par défaut : EU.",
     )
+    parser.add_argument(
+        "--bundle",
+        metavar="FICHIER",
+        help="Chemin vers un bundle personnalisé (.tar.gz ou .json) à installer.",
+    )
+    parser.add_argument(
+        "--export-bundle",
+        metavar="FICHIER",
+        help="Exporte le pack Momentum Ultra vers une archive partageable (.tar.gz).",
+    )
     return parser
 
 
@@ -79,6 +90,11 @@ def main(argv: list[str] | None = None) -> int:
     except SystemExit as exc:
         return int(exc.code) if isinstance(exc.code, int) else 1
 
+    if args.export_bundle:
+        return _handle_export_bundle(
+            destination=args.export_bundle, region_str=args.region
+        )
+
     if args.detect:
         return _handle_detect()
 
@@ -87,9 +103,22 @@ def main(argv: list[str] | None = None) -> int:
             dry_run=args.dry_run,
             auto_confirm=args.yes,
             region_str=args.region,
+            bundle_path=args.bundle,
         )
 
     return 0
+
+
+def _handle_export_bundle(destination: str, region_str: str) -> int:
+    """Handle exporting a shareable bundle."""
+    try:
+        pack = get_default_pack(region=region_str)
+        out_file = export_bundle(pack, destination)
+        print(f"Bundle '{pack.name}' exporté avec succès vers : {out_file}")
+        return 0
+    except (BundleError, OSError, ValueError) as err:
+        print(f"Erreur lors de l'export du bundle : {err}", file=sys.stderr)
+        return 1
 
 
 def _handle_detect() -> int:
@@ -112,13 +141,28 @@ def _handle_detect() -> int:
     return 0
 
 
-def _handle_install(dry_run: bool, auto_confirm: bool, region_str: str) -> int:
+def _handle_install(
+    dry_run: bool,
+    auto_confirm: bool,
+    region_str: str,
+    bundle_path: str | None = None,
+) -> int:
     """Handle the --install / --prepare workflow."""
     try:
         profile = get_region_profile(region_str)
     except ValueError as err:
         print(f"Erreur : {err}", file=sys.stderr)
         return 1
+
+    if bundle_path:
+        try:
+            pack = import_bundle(bundle_path)
+            print(f"Chargement du bundle externe : {pack.name} v{pack.version}")
+        except BundleError as err:
+            print(f"Erreur de bundle : {err}", file=sys.stderr)
+            return 1
+    else:
+        pack = get_default_pack(region=profile.code)
 
     try:
         device = find_flipper()
@@ -133,7 +177,7 @@ def _handle_install(dry_run: bool, auto_confirm: bool, region_str: str) -> int:
         )
         return 1
 
-    if profile.code == RegionCode.WORLD:
+    if profile.code == RegionCode.WORLD and not bundle_path:
         print(
             "\n[Avertissement Légal] Le profil WORLD déverrouille les restrictions fréquentielles."
             "\nVous êtes légalement responsable des émissions radio selon votre juridiction locale.\n"
@@ -149,10 +193,9 @@ def _handle_install(dry_run: bool, auto_confirm: bool, region_str: str) -> int:
 
     mode_label = "SIMULATION (--dry-run)" if dry_run else "ÉCRITURE RÉELLE"
     print(
-        f"\n--- Préparation de Momentum Ultra ({profile.name}) sur {device.port} [{mode_label}] ---"
+        f"\n--- Préparation de Momentum Ultra ({pack.name}) sur {device.port} [{mode_label}] ---"
     )
 
-    pack = get_default_pack(region=profile.code)
     plan = generate_install_plan(pack, backup_existing=True)
 
     try:
@@ -170,6 +213,7 @@ def _handle_install(dry_run: bool, auto_confirm: bool, region_str: str) -> int:
 
     print("\n" + "=" * 60)
     print("Préparation terminée avec succès !")
+    print(f"Pack installé : {pack.name} v{pack.version}")
     print(f"Région configurée : {profile.name}")
     print("Conseils pour le premier démarrage :")
     print(" 1. Redémarrez votre Flipper Zero (touches Retour + Gauche).")
