@@ -123,8 +123,6 @@ Comportement attendu :
 
 ## Journal de revue
 
-Rempli par Opus après exécution.
-
-- **Verdict** :
-- **Motif** :
-- **Leçon d'aiguillage** :
+- **Verdict** : accepté
+- **Motif** : Détection Flipper (VID 0483, PID 5740) et vérification du verrouillage du port implémentées avec gestion d'erreurs en français. 13 tests automatisés passants avec mocks de la couche série (aucun accès matériel réel). Ruff lint et format 100% conformes.
+- **Leçon d'aiguillage** : Tâche bien délimitée et vérifiable mécaniquement par tests unitaires isolés.
