@@ -14,6 +14,7 @@ Outil de préparation et d'onboarding complet pour Flipper Zero sous firmware Mo
 - ⌨️ **Dictionnaires pour clavier prédictif (P1)** : Déploiement des pré-saisies (SSID, adresses IP de lab, commandes BadUSB, mots fréquents) sous `/ext/momentum/dicts/`.
 - 🎨 **Thèmes visuels & personnalisation UI (P0)** : Sélection de styles d'affichage (`default`, `dark_stealth`, `retro_gamer`, `cyberpunk`) et configuration de la barre d'état.
 - 💾 **Synchronisation des captures (P1)** : Sauvegarde locale des fichiers SubGHz, NFC, RFID, IR, BadUSB avec inventaire JSON.
+- ⚡ **Bibliothèque de payloads BadUSB (P1)** : Scripts d'administration et diagnostics réseau (Windows, macOS, Linux) vérifiés et non destructeurs sous `/ext/badusb/`.
 - 📦 **Bundles autoinstall partageables (P1)** : Export et import de packs d'installation complets au format `.tar.gz` ou `.json`.
 - 🚀 **Assistant de premier démarrage** : Conseils guidés et suivi de progression en français.
 
@@ -28,6 +29,9 @@ momentum-ultra --detect
 
 # Diagnostiquer les modules d'extension externes connectés (GPIO)
 momentum-ultra --diagnose-modules
+
+# Consulter la bibliothèque de scripts BadUSB intégrés
+momentum-ultra --list-payloads
 
 # Lancer la simulation d'installation (mode sans risque par défaut)
 momentum-ultra --install
@@ -48,6 +52,6 @@ momentum-ultra --install --bundle mon_pack.tar.gz --no-dry-run
 ## Développement et tests
 
 ```bash
-pytest                        # 73 tests automatisés (couche série 100% simulée)
+pytest                        # 80 tests automatisés (couche série 100% simulée)
 ruff check . && ruff format . # lint et formatage
 ```

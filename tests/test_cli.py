@@ -282,3 +282,12 @@ def test_main_backup_captures(
         assert exit_code == 0
         captured = capsys.readouterr()
         assert "Sauvegarde terminée" in captured.out
+
+
+def test_main_list_payloads(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --list-payloads command."""
+    exit_code = main(["--list-payloads"])
+    assert exit_code == 0
+    captured = capsys.readouterr()
+    assert "Bibliothèque de payloads BadUSB" in captured.out
+    assert "WINDOWS" in captured.out

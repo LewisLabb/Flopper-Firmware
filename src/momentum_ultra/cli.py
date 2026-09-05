@@ -83,6 +83,11 @@ def _build_parser() -> argparse.ArgumentParser:
         metavar="DOSSIER",
         help="Sauvegarde les captures vers le dossier local.",
     )
+    parser.add_argument(
+        "--list-payloads",
+        action="store_true",
+        help="Affiche la liste des payloads BadUSB intégrés.",
+    )
     return parser
 
 
@@ -100,6 +105,8 @@ def main(argv: list[str] | None = None) -> int:
     except SystemExit as exc:
         return int(exc.code) if isinstance(exc.code, int) else 1
 
+    if args.list_payloads:
+        return _handle_list_payloads()
     if args.export_bundle:
         return _handle_export_bundle(args.export_bundle, args.region, args.theme)
     if args.backup_captures:
@@ -111,6 +118,19 @@ def main(argv: list[str] | None = None) -> int:
     if args.install:
         return _handle_install(
             args.dry_run, args.yes, args.region, args.theme, args.bundle
+        )
+    return 0
+
+
+def _handle_list_payloads() -> int:
+    """Display available BadUSB payloads library."""
+    from momentum_ultra.badusb import get_default_payloads
+
+    payloads = get_default_payloads()
+    print(f"\n--- Bibliothèque de payloads BadUSB ({len(payloads)} scripts) ---")
+    for p in payloads:
+        print(
+            f"  • [{p.target_os.value.upper()}] {p.name} ({p.filename}) : {p.description}"
         )
     return 0
 

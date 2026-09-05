@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from momentum_ultra.badusb import export_payload_assets, get_default_payloads
 from momentum_ultra.dictionaries import (
     export_dictionary_assets,
     get_default_dictionaries,
@@ -42,6 +43,7 @@ def get_default_pack(
     theme_data = export_theme_settings(theme_profile)
     theme_assets = get_theme_assets(theme_profile)
     dict_assets = export_dictionary_assets(get_default_dictionaries())
+    payload_assets = export_payload_assets(get_default_payloads())
     modules_list = (
         modules
         if modules is not None
@@ -90,6 +92,7 @@ def get_default_pack(
             ),
             *dict_assets,
             *theme_assets,
+            *payload_assets,
         ],
         settings={
             "profile_name": "Momentum Ultra Default",
