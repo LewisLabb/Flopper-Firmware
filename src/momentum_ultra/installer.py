@@ -22,15 +22,25 @@ from momentum_ultra.regions import (
     export_region_config,
     get_region_profile,
 )
+from momentum_ultra.theme import (
+    ThemeName,
+    export_theme_settings,
+    get_theme_assets,
+    get_theme_profile,
+)
 
 
 def get_default_pack(
     region: RegionCode | str = RegionCode.EU,
     modules: list[ModuleType] | None = None,
+    theme: ThemeName | str = ThemeName.DEFAULT,
 ) -> PackManifest:
-    """Return the built-in curated Momentum Ultra pack configured for a region and modules."""
+    """Return the built-in curated Momentum Ultra pack configured for a region, modules, and theme."""
     profile = get_region_profile(region)
     region_data = export_region_config(profile)
+    theme_profile = get_theme_profile(theme)
+    theme_data = export_theme_settings(theme_profile)
+    theme_assets = get_theme_assets(theme_profile)
     dict_assets = export_dictionary_assets(get_default_dictionaries())
     modules_list = (
         modules
@@ -46,7 +56,7 @@ def get_default_pack(
     return PackManifest(
         name="Momentum-Ultra-Curated-Pack",
         version="1.0.0",
-        description=f"Pack de démarrage optimisé avec applications curées et profil {profile.name}.",
+        description=f"Pack de démarrage optimisé avec applications curées, profil {profile.name} et thème {theme_profile.title}.",
         apps=[
             AppEntry(
                 name="ESP32 WiFi Scanner",
@@ -79,6 +89,7 @@ def get_default_pack(
                 content=b"MOMENTUM_ANIMATION_DATA",
             ),
             *dict_assets,
+            *theme_assets,
         ],
         settings={
             "profile_name": "Momentum Ultra Default",
@@ -87,6 +98,7 @@ def get_default_pack(
             "log_level": "info",
             "region": region_data,
             "modules": modules_data,
+            "theme": theme_data,
         },
     )
 

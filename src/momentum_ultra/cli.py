@@ -20,6 +20,7 @@ from momentum_ultra.modules import (
     get_default_module_configs,
 )
 from momentum_ultra.regions import RegionCode, get_available_regions, get_region_profile
+from momentum_ultra.theme import get_available_themes, get_theme_profile
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -70,6 +71,13 @@ def _build_parser() -> argparse.ArgumentParser:
         choices=valid_regions + [r.lower() for r in valid_regions],
         help="Profil régional pour les fréquences radio (EU, US, JP, WORLD). Par défaut : EU.",
     )
+    valid_themes = [t.value for t in get_available_themes()]
+    parser.add_argument(
+        "--theme",
+        default="default",
+        choices=valid_themes + [t.lower() for t in valid_themes],
+        help="Thème visuel Momentum (default, dark_stealth, retro_gamer, cyberpunk). Par défaut : default.",
+    )
     parser.add_argument(
         "--bundle",
         metavar="FICHIER",
@@ -101,7 +109,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.export_bundle:
         return _handle_export_bundle(
-            destination=args.export_bundle, region_str=args.region
+            destination=args.export_bundle,
+            region_str=args.region,
+            theme_str=args.theme,
         )
 
     if args.detect:
@@ -115,16 +125,19 @@ def main(argv: list[str] | None = None) -> int:
             dry_run=args.dry_run,
             auto_confirm=args.yes,
             region_str=args.region,
+            theme_str=args.theme,
             bundle_path=args.bundle,
         )
 
     return 0
 
 
-def _handle_export_bundle(destination: str, region_str: str) -> int:
+def _handle_export_bundle(
+    destination: str, region_str: str, theme_str: str = "default"
+) -> int:
     """Handle exporting a shareable bundle."""
     try:
-        pack = get_default_pack(region=region_str)
+        pack = get_default_pack(region=region_str, theme=theme_str)
         out_file = export_bundle(pack, destination)
         print(f"Bundle '{pack.name}' exporté avec succès vers : {out_file}")
         return 0
@@ -196,11 +209,13 @@ def _handle_install(
     dry_run: bool,
     auto_confirm: bool,
     region_str: str,
+    theme_str: str = "default",
     bundle_path: str | None = None,
 ) -> int:
     """Handle the --install / --prepare workflow."""
     try:
         profile = get_region_profile(region_str)
+        theme_profile = get_theme_profile(theme_str)
     except ValueError as err:
         print(f"Erreur : {err}", file=sys.stderr)
         return 1
@@ -213,7 +228,7 @@ def _handle_install(
             print(f"Erreur de bundle : {err}", file=sys.stderr)
             return 1
     else:
-        pack = get_default_pack(region=profile.code)
+        pack = get_default_pack(region=profile.code, theme=theme_profile.name)
 
     try:
         device = find_flipper()
@@ -266,6 +281,7 @@ def _handle_install(
     print("Préparation terminée avec succès !")
     print(f"Pack installé : {pack.name} v{pack.version}")
     print(f"Région configurée : {profile.name}")
+    print(f"Thème configuré : {theme_profile.title}")
     print("Conseils pour le premier démarrage :")
     print(" 1. Redémarrez votre Flipper Zero (touches Retour + Gauche).")
     print(" 2. Retrouvez vos applications dans le menu Applications.")

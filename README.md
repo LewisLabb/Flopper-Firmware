@@ -12,6 +12,7 @@ Outil de préparation et d'onboarding complet pour Flipper Zero sous firmware Mo
 - 🛡️ **Garde-fous matériels stricts** : Mode simulation (`--dry-run`) actif par défaut, confirmation interactive obligatoire avant toute écriture réelle, **aucune suppression** sur la carte SD (déplacement préventif vers `/ext/backup`).
 - 🌍 **Profils région-safe (P0)** : Sélection de région (`EU / CE`, `US / FCC`, `JP / MIC`, `WORLD`) avec configuration responsable des bandes de fréquences d'émission.
 - ⌨️ **Dictionnaires pour clavier prédictif (P1)** : Déploiement des pré-saisies (SSID, adresses IP de lab, commandes BadUSB, mots fréquents) sous `/ext/momentum/dicts/`.
+- 🎨 **Thèmes visuels & personnalisation UI (P0)** : Sélection de styles d'affichage (`default`, `dark_stealth`, `retro_gamer`, `cyberpunk`) et configuration de la barre d'état.
 - 📦 **Bundles autoinstall partageables (P1)** : Export et import de packs d'installation complets au format `.tar.gz` ou `.json`.
 - 🚀 **Assistant de premier démarrage** : Conseils guidés et suivi de progression en français.
 
@@ -30,8 +31,8 @@ momentum-ultra --diagnose-modules
 # Lancer la simulation d'installation (mode sans risque par défaut)
 momentum-ultra --install
 
-# Lancer l'installation réelle avec profil régional (ex: US)
-momentum-ultra --install --no-dry-run --region US
+# Lancer l'installation avec un thème spécifique et un profil régional
+momentum-ultra --install --theme dark_stealth --region EU --no-dry-run
 
 # Exporter le pack complet vers un bundle partageable
 momentum-ultra --export-bundle mon_pack.tar.gz
@@ -43,6 +44,6 @@ momentum-ultra --install --bundle mon_pack.tar.gz --no-dry-run
 ## Développement et tests
 
 ```bash
-pytest                        # 54 tests automatisés (couche série 100% simulée)
+pytest                        # 68 tests automatisés (couche série 100% simulée)
 ruff check . && ruff format . # lint et formatage
 ```

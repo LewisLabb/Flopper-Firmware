@@ -250,3 +250,17 @@ def test_main_install_custom_bundle(
         captured = capsys.readouterr()
         assert "custom-pack-xyz" in captured.out
         assert "Préparation terminée avec succès" in captured.out
+
+
+def test_main_install_with_theme(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --install with --theme option."""
+    mock_port = _make_mock_flipper_port("COM3")
+    mock_serial = MockSerialClient()
+    with (
+        patch("serial.tools.list_ports.comports", return_value=[mock_port]),
+        patch("serial.Serial", return_value=mock_serial),
+    ):
+        exit_code = main(["--install", "--theme", "dark_stealth"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "Dark Stealth" in captured.out
