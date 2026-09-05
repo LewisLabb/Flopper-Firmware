@@ -1,0 +1,110 @@
+# Fiche de tâche — Gestionnaire de modules externes et diagnostic GPIO
+
+## Titre
+
+Implémenter la détection, la configuration et le diagnostic des modules externes connectés au GPIO (CC1101, nRF24, ESP32 Marauder, cartes 2-en-1).
+
+## Agent assigné
+
+**Gemini (Antigravity).** Modélisation de cartes d'extension, parsing de diagnostics série simulés et génération de profils de pinout. 100% vérifiable par tests unitaires.
+
+Revue obligatoire par le sous-agent `reviseur` de Claude Code avant fusion.
+
+## Branche
+
+`tache/gestionnaire-modules`
+
+## Objectif
+
+Conformément au Pilier 5 du brief Momentum Ultra (« Gestionnaire de modules unifié »), permettre l'auto-détection et la configuration guidée des cartes d'extension matérielles branchées sur les broches GPIO du Flipper Zero (CC1101 pour Sub-GHz externe, nRF24 pour le 2.4 GHz, ESP32 pour Wi-Fi Marauder, et cartes combinées 2-en-1). Générer la configuration des broches et des applications associées sous `/ext/settings/modules.json`.
+
+## Périmètre
+
+Fichiers à créer ou modifier, et eux seuls :
+
+```text
+src/momentum_ultra/modules.py
+src/momentum_ultra/cli.py
+src/momentum_ultra/installer.py
+tests/test_modules.py
+tests/test_cli.py
+taches/tache-09-gestionnaire-modules.md
+```
+
+## Hors périmètre
+
+- `AGENTS.md`, `CLAUDE.md`, `taches/_GABARIT.md`, `taches/tache-01` à `08`.
+- Tout flashage direct de firmware ESP32 (hors périmètre de l'onboarding Flipper).
+
+## Contrat
+
+### `src/momentum_ultra/modules.py`
+
+```python
+from dataclasses import dataclass
+from enum import Enum
+from typing import Any
+
+class ModuleType(str, Enum):
+    """Supported external hardware modules."""
+    CC1101 = "cc1101"         # Sub-GHz longue portée
+    NRF24 = "nrf24"           # 2.4 GHz MouseJacker / Sniffing
+    ESP32_MARAUDER = "esp32"  # Wi-Fi / Bluetooth Marauder
+    COMBO_2IN1 = "combo_2in1" # CC1101 + nRF24 combo board
+
+@dataclass(frozen=True)
+class ModulePinout:
+    """Pin mapping configuration for an external module."""
+    cs_pin: str
+    mosi_pin: str = "15"  # Standard SPI MOSI
+    miso_pin: str = "16"  # Standard SPI MISO
+    sck_pin: str = "13"   # Standard SPI SCK
+    gdo0_pin: str | None = None
+    extra_pins: dict[str, str] | None = None
+
+@dataclass(frozen=True)
+class ModuleConfig:
+    """Configuration and status of an external module."""
+    module_type: ModuleType
+    name: str
+    enabled: bool
+    pinout: ModulePinout
+    description: str
+
+def get_default_module_configs() -> dict[ModuleType, ModuleConfig]:
+    """Return standard pinout configurations for all supported modules."""
+
+def detect_connected_modules(raw_gpio_output: str) -> list[ModuleType]:
+    """Parse Flipper GPIO response or SPI probe output to identify connected modules."""
+
+def export_modules_settings(active_modules: list[ModuleType]) -> dict[str, Any]:
+    """Export active modules configuration dictionary for /ext/settings/modules.json."""
+```
+
+### `src/momentum_ultra/cli.py`
+
+- Ajout de l'option `--diagnose-modules` : interroge le Flipper Zero pour détecter les modules externes branchés et affiche un bilan de diagnostic en français.
+- Intégration de la configuration des modules dans le pack d'installation.
+
+## Critères d'acceptation
+
+- [ ] `pytest` passe à 100%
+- [ ] `ruff check .` et `ruff format --check .` ne signalent rien
+- [ ] Profils de pinout définis pour CC1101, nRF24, ESP32 et combo 2-en-1
+- [ ] `detect_connected_modules` identifie correctement les signatures des modules
+- [ ] `main(["--diagnose-modules"])` affiche le statut des modules connectés
+- [ ] Aucun fichier hors périmètre créé ou modifié
+
+## Conditions d'arrêt
+
+- Une modification hors périmètre semble nécessaire
+- Une dépendance non listée serait requise
+- Le contrat ci-dessus paraît incohérent
+
+## Journal de revue
+
+Rempli après exécution.
+
+- **Verdict** :
+- **Motif** :
+- **Leçon d'aiguillage** :
