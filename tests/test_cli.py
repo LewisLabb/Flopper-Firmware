@@ -23,6 +23,31 @@ def _make_mock_flipper_port(device: str = "COM3") -> MagicMock:
     return port
 
 
+class MockSerialClient:
+    """Mock serial stream for CLI testing."""
+
+    def __init__(self) -> None:
+        """Initialize mock serial connection."""
+        self.is_open: bool = True
+        self.written: list[bytes] = []
+
+    def write(self, data: bytes) -> int:
+        """Record written bytes."""
+        self.written.append(data)
+        return len(data)
+
+    def read(self, size: int = 1) -> bytes:
+        """Return prompt marker."""
+        return b">: "
+
+    def reset_input_buffer(self) -> None:
+        """Stub reset buffer."""
+
+    def close(self) -> None:
+        """Close mock stream."""
+        self.is_open = False
+
+
 def test_main_version(capsys: pytest.CaptureFixture[str]) -> None:
     """Test that --version displays the version string and exits with 0."""
     exit_code = main(["--version"])
@@ -85,3 +110,53 @@ def test_main_detect_port_busy(capsys: pytest.CaptureFixture[str]) -> None:
         assert exit_code == 1
         captured = capsys.readouterr()
         assert "mais le port est occupé" in captured.err
+
+
+def test_main_install_dry_run_default(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --install runs in simulation mode by default without prompt."""
+    mock_port = _make_mock_flipper_port("COM3")
+    mock_serial = MockSerialClient()
+    with (
+        patch("serial.tools.list_ports.comports", return_value=[mock_port]),
+        patch("serial.Serial", return_value=mock_serial),
+    ):
+        exit_code = main(["--install"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "SIMULATION (--dry-run)" in captured.out
+        assert "Préparation terminée avec succès" in captured.out
+        assert "Conseils pour le premier démarrage" in captured.out
+
+
+def test_main_install_no_dry_run_cancelled(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Test --install with --no-dry-run is cancelled when user inputs 'n'."""
+    mock_port = _make_mock_flipper_port("COM3")
+    mock_serial = MockSerialClient()
+    with (
+        patch("serial.tools.list_ports.comports", return_value=[mock_port]),
+        patch("serial.Serial", return_value=mock_serial),
+        patch("builtins.input", return_value="n"),
+    ):
+        exit_code = main(["--install", "--no-dry-run"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "Installation annulée par l'utilisateur." in captured.out
+
+
+def test_main_install_no_dry_run_yes_flag(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Test --install with --no-dry-run and -y flag executes real mode directly."""
+    mock_port = _make_mock_flipper_port("COM3")
+    mock_serial = MockSerialClient()
+    with (
+        patch("serial.tools.list_ports.comports", return_value=[mock_port]),
+        patch("serial.Serial", return_value=mock_serial),
+    ):
+        exit_code = main(["--install", "--no-dry-run", "-y"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "ÉCRITURE RÉELLE" in captured.out
+        assert "Préparation terminée avec succès !" in captured.out
