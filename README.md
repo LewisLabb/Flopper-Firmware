@@ -24,6 +24,9 @@ Outil de préparation et d'onboarding complet pour Flipper Zero sous firmware Mo
 # Vérifier la détection du Flipper
 momentum-ultra --detect
 
+# Diagnostiquer les modules d'extension externes connectés (GPIO)
+momentum-ultra --diagnose-modules
+
 # Lancer la simulation d'installation (mode sans risque par défaut)
 momentum-ultra --install
 
