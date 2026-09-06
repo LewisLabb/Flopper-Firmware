@@ -52,6 +52,6 @@ flopper --install --bundle mon_pack.tar.gz --no-dry-run
 ## Développement et tests
 
 ```bash
-pytest                        # 80 tests automatisés (couche série 100% simulée)
+pytest                        # 119 tests automatisés (couche série 100% simulée)
 ruff check . && ruff format . # lint et formatage
 ```
