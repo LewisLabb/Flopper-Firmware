@@ -10,6 +10,7 @@ import serial
 
 DEFAULT_BACKUP_DIR = "/ext/backup"
 PROMPT = b">: "
+CLI_ETX = b"\x03"
 
 
 class FlipperClientError(Exception):
@@ -48,6 +49,32 @@ class FlipperClient:
         self.timeout = timeout
         self._serial: serial.Serial | None = None
 
+    def _write_bytes(self, data: bytes) -> None:
+        """Write raw bytes to serial connection with error wrapping."""
+        if self._serial is None or not self._serial.is_open:
+            raise FlipperClientError(
+                f"Le client série sur {self.port} n'est pas connecté."
+            )
+        try:
+            self._serial.write(data)
+        except (serial.SerialException, OSError) as exc:
+            raise FlipperClientError(
+                f"Erreur d'écriture sur le port série {self.port} : {exc}"
+            ) from exc
+
+    def _read_bytes(self, n: int = 1) -> bytes:
+        """Read n bytes from serial connection with error wrapping."""
+        if self._serial is None or not self._serial.is_open:
+            raise FlipperClientError(
+                f"Le client série sur {self.port} n'est pas connecté."
+            )
+        try:
+            return self._serial.read(n)
+        except (serial.SerialException, OSError) as exc:
+            raise FlipperClientError(
+                f"Erreur de lecture sur le port série {self.port} : {exc}"
+            ) from exc
+
     def connect(self) -> None:
         """Open serial connection and synchronize with Flipper CLI prompt."""
         try:
@@ -61,14 +88,20 @@ class FlipperClient:
                 f"Impossible d'ouvrir le port série {self.port} : {exc}"
             ) from exc
 
-        # Synchronize CLI shell
         self._sync_prompt()
 
     def close(self) -> None:
         """Close the serial connection."""
-        if self._serial is not None and self._serial.is_open:
-            self._serial.close()
-        self._serial = None
+        if self._serial is not None:
+            try:
+                if self._serial.is_open:
+                    self._serial.close()
+            except (serial.SerialException, OSError) as exc:
+                raise FlipperClientError(
+                    f"Erreur lors de la fermeture du port série {self.port} : {exc}"
+                ) from exc
+            finally:
+                self._serial = None
 
     def __enter__(self) -> Self:
         """Enter context manager."""
@@ -87,26 +120,28 @@ class FlipperClient:
     def _sync_prompt(self) -> None:
         """Send newline and wait for the CLI prompt to verify ready state."""
         if self._serial is None:
-            raise FlipperClientError("Le client série n'est pas connecté.")
-
-        self._serial.reset_input_buffer()
-        self._serial.write(b"\r\n")
+            raise FlipperClientError(
+                f"Le client série sur {self.port} n'est pas connecté."
+            )
+        try:
+            self._serial.reset_input_buffer()
+        except (serial.SerialException, OSError) as exc:
+            raise FlipperClientError(
+                f"Erreur de réinitialisation du tampon sur {self.port} : {exc}"
+            ) from exc
+        self._write_bytes(b"\r\n")
         self._read_until_prompt()
 
-    def _read_until_prompt(self) -> str:
-        """Read incoming serial bytes until the prompt marker is reached."""
-        if self._serial is None:
-            raise FlipperClientError("Le client série n'est pas connecté.")
-
+    def _read_until(self, marker: bytes) -> str:
+        """Read incoming serial bytes until the marker is reached."""
         buffer = bytearray()
         start_time = time.time()
 
         while True:
-            if buffer.endswith(PROMPT):
-                # Strip prompt marker from response
-                return buffer[: -len(PROMPT)].decode("utf-8", errors="replace")
+            if buffer.endswith(marker):
+                return buffer[: -len(marker)].decode("utf-8", errors="replace")
 
-            chunk = self._serial.read(1)
+            chunk = self._read_bytes(1)
             if chunk:
                 buffer.extend(chunk)
             else:
@@ -116,16 +151,27 @@ class FlipperClient:
                     )
                 time.sleep(0.005)
 
+    def _read_until_prompt(self) -> str:
+        """Read incoming serial bytes until the prompt marker is reached."""
+        return self._read_until(PROMPT)
+
     def send_cmd(self, command: str) -> str:
         """Send a raw text command to Flipper and wait for the response prompt."""
-        if self._serial is None:
-            raise FlipperClientError("Le client série n'est pas connecté.")
+        words = command.strip().split()
+        if words and self.dry_run:
+            first_word = words[0].lower()
+            second_word = words[1].lower() if len(words) > 1 else ""
+            modifying_ops = {"write", "mkdir", "remove", "rename", "format"}
+            if first_word in modifying_ops or (
+                first_word == "storage" and second_word in modifying_ops
+            ):
+                raise FlipperClientError(
+                    f"Opération modifiante '{command}' interdite en mode simulation (--dry-run)."
+                )
 
-        cmd_bytes = f"{command.strip()}\r\n".encode()
-        self._serial.write(cmd_bytes)
+        self._write_bytes(f"{command.strip()}\r\n".encode())
         output = self._read_until_prompt()
 
-        # Strip echo of the command if present at the start
         lines = output.replace("\r\n", "\n").split("\n")
         if lines and command.strip() in lines[0]:
             lines = lines[1:]
@@ -143,20 +189,21 @@ class FlipperClient:
         items: list[StorageItem] = []
         for line in output.split("\n"):
             line = line.strip()
-            if not line:
+            if not line or line == "Empty":
                 continue
-            if line.startswith("[DIR]"):
-                dir_name = line[5:].strip()
+            if line.startswith("[D] "):
+                dir_name = line[4:].strip()
                 items.append(StorageItem(name=dir_name, is_dir=True, size=0))
-            elif line.startswith("[FILE]"):
-                parts = line[6:].strip().split()
-                if len(parts) >= 2:
-                    name = " ".join(parts[:-1])
-                    size_str = parts[-1].rstrip("B")
+            elif line.startswith("[F] "):
+                remainder = line[4:].strip()
+                parts = remainder.rsplit(" ", 1)
+                if len(parts) == 2:
+                    name, size_part = parts
+                    size_str = size_part.rstrip("b").rstrip("B")
                     size = int(size_str) if size_str.isdigit() else 0
                     items.append(StorageItem(name=name, is_dir=False, size=size))
-                elif len(parts) == 1:
-                    items.append(StorageItem(name=parts[0], is_dir=False, size=0))
+                else:
+                    items.append(StorageItem(name=remainder, is_dir=False, size=0))
 
         return items
 
@@ -177,14 +224,17 @@ class FlipperClient:
         if self.dry_run:
             return True
 
-        output = self.send_cmd(f"storage write {path}")
-        if "Storage error" in output or "error:" in output.lower():
-            raise FlipperCommandError(
-                f"Impossible d'écrire dans le fichier {path} : {output}"
-            )
-        if self._serial is not None:
-            self._serial.write(content)
+        self._write_bytes(f"storage write {path}\r\n".encode())
+        first_line = self._read_until(b"\n")
+        if "Storage error" in first_line or "error:" in first_line.lower():
             self._read_until_prompt()
+            raise FlipperCommandError(
+                f"Impossible d'écrire dans le fichier {path} : {first_line.strip()}"
+            )
+
+        self._write_bytes(content)
+        self._write_bytes(CLI_ETX)
+        self._read_until_prompt()
         return True
 
     def backup_item(

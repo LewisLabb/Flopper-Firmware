@@ -8,6 +8,7 @@ import pytest
 import serial
 
 from momentum_ultra.flipper_client import (
+    CLI_ETX,
     DEFAULT_BACKUP_DIR,
     FlipperClient,
     FlipperClientError,
@@ -29,14 +30,21 @@ class MockSerialStream:
         self.is_open: bool = True
         self._current_response: bytes = b""
         self._pos: int = 0
+        self.raise_on_write: Exception | None = None
+        self.raise_on_read: Exception | None = None
+        self.raise_on_close: Exception | None = None
 
     def write(self, data: bytes) -> int:
-        """Record written data."""
+        """Record written data or raise configured exception."""
+        if self.raise_on_write is not None:
+            raise self.raise_on_write
         self.written.append(data)
         return len(data)
 
     def read(self, size: int = 1) -> bytes:
-        """Read bytes from the current response queue."""
+        """Read bytes from the current response queue or raise exception."""
+        if self.raise_on_read is not None:
+            raise self.raise_on_read
         if self._pos >= len(self._current_response):
             if self.responses:
                 self._current_response = self.responses.pop(0)
@@ -51,7 +59,9 @@ class MockSerialStream:
         """Reset input buffer stub."""
 
     def close(self) -> None:
-        """Close mock stream."""
+        """Close mock stream or raise exception."""
+        if self.raise_on_close is not None:
+            raise self.raise_on_close
         self.is_open = False
 
 
@@ -85,29 +95,12 @@ def test_connect_failure() -> None:
     assert "Impossible d'ouvrir le port série" in str(exc_info.value)
 
 
-def test_send_cmd_success() -> None:
-    """Test sending command and receiving parsed output."""
-    mock_serial = MockSerialStream(
-        [
-            b"\r\n>: ",  # for initial sync
-            b"storage list /ext\r\n[DIR] apps\r\n[FILE] test.txt 42B\r\n>: ",
-        ]
-    )
-    with (
-        patch("serial.Serial", return_value=mock_serial),
-        FlipperClient(port="COM3") as client,
-    ):
-        output = client.send_cmd("storage list /ext")
-        assert "[DIR] apps" in output
-        assert "[FILE] test.txt 42B" in output
-
-
-def test_list_dir_parsing() -> None:
-    """Test parsing directory listing from storage list."""
+def test_list_dir_firmware_format() -> None:
+    """Test parsing directory listing from literal firmware storage list output."""
     mock_serial = MockSerialStream(
         [
             b"\r\n>: ",
-            b"storage list /ext\r\n[DIR] apps\r\n[DIR] assets\r\n[FILE] config.txt 100B\r\n>: ",
+            b"\t[D] apps\r\n\t[F] key.sub 1024b\r\n>: ",
         ]
     )
     with (
@@ -115,18 +108,34 @@ def test_list_dir_parsing() -> None:
         FlipperClient(port="COM3") as client,
     ):
         items = client.list_dir("/ext")
-        assert len(items) == 3
-        assert items[0] == StorageItem(name="apps", is_dir=True, size=0)
-        assert items[1] == StorageItem(name="assets", is_dir=True, size=0)
-        assert items[2] == StorageItem(name="config.txt", is_dir=False, size=100)
+        assert items == [
+            StorageItem(name="apps", is_dir=True, size=0),
+            StorageItem(name="key.sub", is_dir=False, size=1024),
+        ]
 
 
-def test_list_dir_error() -> None:
-    """Test list_dir raises FlipperCommandError on storage error."""
+def test_list_dir_empty_folder() -> None:
+    """Test list_dir on empty directory returns empty list without error."""
     mock_serial = MockSerialStream(
         [
             b"\r\n>: ",
-            b"storage list /ext/invalid\r\nStorage error: Directory not found\r\n>: ",
+            b"\tEmpty\r\n>: ",
+        ]
+    )
+    with (
+        patch("serial.Serial", return_value=mock_serial),
+        FlipperClient(port="COM3") as client,
+    ):
+        items = client.list_dir("/ext/empty_dir")
+        assert items == []
+
+
+def test_list_dir_error() -> None:
+    """Test list_dir raises FlipperCommandError on firmware storage error."""
+    mock_serial = MockSerialStream(
+        [
+            b"\r\n>: ",
+            b"Storage error: Directory not found\r\n>: ",
         ]
     )
     with (
@@ -138,6 +147,61 @@ def test_list_dir_error() -> None:
     assert "Erreur lors de la lecture du dossier" in str(exc_info.value)
 
 
+def test_write_file_dry_run() -> None:
+    """Test write_file does not write data when dry_run=True."""
+    mock_serial = MockSerialStream([b"\r\n>: "])
+    with (
+        patch("serial.Serial", return_value=mock_serial),
+        FlipperClient(port="COM3", dry_run=True) as client,
+    ):
+        assert client.write_file("/ext/test.txt", b"hello") is True
+        assert len(mock_serial.written) == 1  # Only initial sync
+
+
+def test_write_file_real_mode_success() -> None:
+    """Test write_file following exact firmware interactive flow."""
+    mock_serial = MockSerialStream(
+        [
+            b"\r\n>: ",  # initial sync
+            b"Just write your text data. New line by Ctrl+Enter, exit by Ctrl+C.\r\n",  # response to storage write
+            b">: ",  # prompt after ETX
+        ]
+    )
+    with (
+        patch("serial.Serial", return_value=mock_serial),
+        FlipperClient(port="COM3", dry_run=False) as client,
+    ):
+        content = b"TEST_PAYLOAD_DATA"
+        assert client.write_file("/ext/test.txt", content) is True
+
+        assert len(mock_serial.written) == 4
+        assert mock_serial.written[0] == b"\r\n"
+        assert mock_serial.written[1] == b"storage write /ext/test.txt\r\n"
+        assert mock_serial.written[2] == content
+        assert mock_serial.written[3] == CLI_ETX
+
+
+def test_write_file_real_mode_error() -> None:
+    """Test write_file when firmware returns storage error immediately."""
+    mock_serial = MockSerialStream(
+        [
+            b"\r\n>: ",  # initial sync
+            b"Storage error: fichier verrouille\r\n>: ",
+        ]
+    )
+    with (
+        patch("serial.Serial", return_value=mock_serial),
+        FlipperClient(port="COM3", dry_run=False) as client,
+        pytest.raises(FlipperCommandError) as exc_info,
+    ):
+        client.write_file("/ext/locked.txt", b"data")
+
+    assert "fichier verrouille" in str(exc_info.value)
+    # Verify neither content nor ETX was sent
+    assert b"data" not in mock_serial.written
+    assert CLI_ETX not in mock_serial.written
+
+
 def test_mkdir_dry_run() -> None:
     """Test mkdir does not write when dry_run=True."""
     mock_serial = MockSerialStream([b"\r\n>: "])
@@ -146,7 +210,6 @@ def test_mkdir_dry_run() -> None:
         FlipperClient(port="COM3", dry_run=True) as client,
     ):
         assert client.mkdir("/ext/apps_new") is True
-        # Only the initial sync write occurred
         assert len(mock_serial.written) == 1
         assert b"storage mkdir" not in mock_serial.written[0]
 
@@ -166,36 +229,6 @@ def test_mkdir_real_mode() -> None:
         assert client.mkdir("/ext/apps_new") is True
         written_commands = b"".join(mock_serial.written)
         assert b"storage mkdir /ext/apps_new\r\n" in written_commands
-
-
-def test_write_file_dry_run() -> None:
-    """Test write_file does not write data when dry_run=True."""
-    mock_serial = MockSerialStream([b"\r\n>: "])
-    with (
-        patch("serial.Serial", return_value=mock_serial),
-        FlipperClient(port="COM3", dry_run=True) as client,
-    ):
-        assert client.write_file("/ext/test.txt", b"hello") is True
-        assert len(mock_serial.written) == 1
-
-
-def test_write_file_real_mode() -> None:
-    """Test write_file sends write command and bytes when dry_run=False."""
-    mock_serial = MockSerialStream(
-        [
-            b"\r\n>: ",
-            b"storage write /ext/test.txt\r\n>: ",
-            b">: ",
-        ]
-    )
-    with (
-        patch("serial.Serial", return_value=mock_serial),
-        FlipperClient(port="COM3", dry_run=False) as client,
-    ):
-        assert client.write_file("/ext/test.txt", b"hello world") is True
-        written_data = b"".join(mock_serial.written)
-        assert b"storage write /ext/test.txt" in written_data
-        assert b"hello world" in written_data
 
 
 def test_backup_item_dry_run() -> None:
@@ -227,13 +260,60 @@ def test_backup_item_real_mode() -> None:
         assert target == "/ext/backup/apps"
         written_data = b"".join(mock_serial.written)
         assert b"storage rename /ext/apps /ext/backup/apps" in written_data
-        # Strictly verify storage remove is never sent
         assert b"storage remove" not in written_data
+
+
+def test_send_cmd_modifying_blocked_in_dry_run() -> None:
+    """Test that send_cmd blocks modifying commands when dry_run=True."""
+    mock_serial = MockSerialStream([b"\r\n>: "])
+    with (
+        patch("serial.Serial", return_value=mock_serial),
+        FlipperClient(port="COM3", dry_run=True) as client,
+    ):
+        with pytest.raises(FlipperClientError, match="interdite en mode simulation"):
+            client.send_cmd("storage remove /ext/apps")
+        # Ensure no byte was sent on the serial port for this command
+        assert len(mock_serial.written) == 1  # Only initial sync
+
+
+def test_send_cmd_read_allowed_in_dry_run() -> None:
+    """Test that send_cmd allows read commands when dry_run=True."""
+    mock_serial = MockSerialStream(
+        [
+            b"\r\n>: ",
+            b"\t[D] apps\r\n>: ",
+        ]
+    )
+    with (
+        patch("serial.Serial", return_value=mock_serial),
+        FlipperClient(port="COM3", dry_run=True) as client,
+    ):
+        output = client.send_cmd("storage list /ext")
+        assert "[D] apps" in output
+
+
+def test_serial_exception_wrapped_on_io() -> None:
+    """Test that SerialException during read or write is wrapped into FlipperClientError."""
+    mock_serial = MockSerialStream([b"\r\n>: "])
+    with (
+        patch("serial.Serial", return_value=mock_serial),
+        FlipperClient(port="COM3", dry_run=False) as client,
+    ):
+        # Trigger write failure
+        mock_serial.raise_on_write = serial.SerialException("Device disconnected")
+        with pytest.raises(FlipperClientError, match="Erreur d'écriture"):
+            client.send_cmd("storage info")
+
+        # Trigger read failure
+        mock_serial.raise_on_write = None
+        mock_serial.raise_on_read = serial.SerialException("Read timed out")
+        with pytest.raises(FlipperClientError, match="Erreur de lecture"):
+            client.send_cmd("storage info")
 
 
 def test_timeout_error() -> None:
     """Test timeout during prompt read raises FlipperTimeoutError."""
-    mock_serial = MockSerialStream([])  # No bytes returned -> triggers timeout
+    mock_serial = MockSerialStream([])
     with (
         patch("serial.Serial", return_value=mock_serial),
         pytest.raises(FlipperTimeoutError) as exc_info,

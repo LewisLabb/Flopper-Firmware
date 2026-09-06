@@ -35,13 +35,19 @@ class MockSerialClient:
         self.written: list[bytes] = []
         self.response_text = response_text
 
+    def open(self) -> None:
+        """Reopen mock stream."""
+        self.is_open = True
+
     def write(self, data: bytes) -> int:
         """Record written bytes."""
+        self.is_open = True
         self.written.append(data)
         return len(data)
 
     def read(self, size: int = 1) -> bytes:
         """Return prompt marker with optional response text."""
+        self.is_open = True
         last_written = self.written[-1] if self.written else b""
         if self.response_text and last_written not in (b"\r\n", b""):
             out = f"{self.response_text}\r\n>: ".encode()
@@ -51,6 +57,7 @@ class MockSerialClient:
 
     def reset_input_buffer(self) -> None:
         """Stub reset buffer."""
+        self.is_open = True
 
     def close(self) -> None:
         """Close mock stream."""
@@ -272,7 +279,7 @@ def test_main_backup_captures(
 ) -> None:
     """Test --backup-captures command."""
     mock_port = _make_mock_flipper_port("COM3")
-    mock_serial = MockSerialClient(response_text="[F] key.sub 128B")
+    mock_serial = MockSerialClient(response_text="\t[F] key.sub 128b")
     dest_dir = tmp_path / "captures_out"
     with (
         patch("serial.tools.list_ports.comports", return_value=[mock_port]),
