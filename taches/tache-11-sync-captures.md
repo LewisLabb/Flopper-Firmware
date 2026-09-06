@@ -205,3 +205,29 @@ Séquence réelle de `storage read <path>` (firmware Flipper) : le firmware rép
 
 - La séquence réelle de `storage read` diffère de celle décrite → s'arrêter et demander, ne pas re-deviner un format.
 - Une lecture binaire fiable exigerait de modifier le contrat public de `send_cmd` → s'arrêter et demander.
+
+### Journal de revue de la correction (reviseur) — 2026-09-05
+
+Revue indépendante rendue par le sous-agent `reviseur` (contexte séparé, sans droit d'écriture), sur la branche `tache/reprise-defauts-materiels`. Critères exécutés (pytest 89/89, ruff propre), non déduits.
+
+```text
+Verdict : accepté
+Motif : read_file (flipper_client.py:257-281) + _read_exact (:158-173) lisent
+        exactement N octets bruts, jamais décodés ; sync.py:86-88 écrit ces octets
+        et compte len(data). Round-trip binaire non-UTF-8 + prompt embarqué vérifié
+        (test_read_file_binary_fidelity, test_sync_captures_to_local_real_mode) ;
+        en-tête Size absent du fichier ; seules storage list/read émises.
+Critères d'acceptation : tous tenus.
+Garde-fous : intacts — lecture seule, no-op en dry_run, dry_run=True par défaut,
+        aucune écriture ni suppression SD.
+Réserve non bloquante : read_file (:263) lit sa première ligne comme en-tête Size
+        sans gérer un éventuel écho de commande, alors que send_cmd (:193) strippe
+        un écho — indice que le firmware écho les commandes. Conforme à la séquence
+        imposée par la fiche (sans écho), invérifiable sans Flipper physique. À
+        trancher contre le firmware réel avant tout usage matériel (la condition
+        d'arrêt de cette fiche interdit de re-deviner le format).
+Résiduel hors périmètre : si read_file échoue sur un 2e fichier, sync propage
+        l'exception avant export_captures_catalog (sync.py:103) — fichier orphelin,
+        catalogue non généré. Point #2 de la revue initiale ; hors du périmètre
+        « fidélité binaire », à traiter dans une reprise ultérieure.
+```

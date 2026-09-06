@@ -180,3 +180,20 @@ Trois exigences, sans élargir le périmètre :
 ### Conditions d'arrêt de la correction
 
 - Une vraie liste blanche de contenu (au-delà de la syntaxe) est demandée : elle dépasse ce périmètre → ouvrir une fiche dédiée.
+
+### Journal de revue de la correction (reviseur) — 2026-09-05
+
+Revue indépendante rendue par le sous-agent `reviseur` (contexte séparé, sans droit d'écriture). Critères exécutés (pytest 89/89, ruff propre), non déduits.
+
+```text
+Verdict : accepté
+Motif : la docstring de validate_duckyscript (badusb.py:122-130) déclare « syntax
+        only — not the safety » ; la liste noire est conservée en défense en
+        profondeur (:108-114), non présentée comme garantie.
+Critères d'acceptation : tous tenus — test_validate_duckyscript_is_not_a_safety_filter
+        documente que « STRING rm -rf ~ » passe la validation syntaxique ;
+        test_default_payloads_are_non_destructive vérifie les 5 payloads
+        (ADMIN/NETWORK/DEMO, revalidés à l'export badusb.py:157).
+Garde-fous : intacts — _FORBIDDEN_PATTERNS toujours actif et testé ; aucun garde-fou
+        affaibli pour faire passer un test.
+```
