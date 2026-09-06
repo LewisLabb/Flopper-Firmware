@@ -120,7 +120,14 @@ def get_default_payloads() -> list[BadUSBPayload]:
 
 
 def validate_duckyscript(script: str) -> bool:
-    """Validate that script uses standard DuckyScript syntax without forbidden patterns."""
+    """Validate DuckyScript *syntax* only — not the safety of what the script does.
+
+    Returns True when the script is non-empty and every non-comment line begins
+    with a known DuckyScript keyword. A short best-effort denylist also rejects a
+    few blatantly destructive one-liners, but that denylist is NOT a safety
+    guarantee: it is trivially bypassed (e.g. ``rm -rf ~``, piped downloads) and
+    must never be relied on to sanitize third-party scripts.
+    """
     if not script or not script.strip():
         return False
 
