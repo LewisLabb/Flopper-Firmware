@@ -230,31 +230,25 @@ Le code actuel appelle `send_cmd(f"storage write {path}")` (`:180`), qui attend 
 
 ### Défaut 3 — erreurs série non interceptées (`flipper_client.py:70, 109, 125, 186`)
 
-Un `serial.SerialException` levé pendant une lecture ou une écriture après l'ouverture du port (câble débranché, port fermé de force) remonte aujourd'hui brute, sans message français, hors de `send_cmd`, `write_file`, `close`. Centraliser tout accès direct à `self._serial.read(...)`/`self._serial.write(...)` derrière deux méthodes privées (par exemple `_write_bytes(data: bytes)` et `_read_bytes(n: int) -> bytes`) qui interceptent `serial.SerialException`/`OSError` et relèvent `FlipperClientError` avec un message en français incluant `self.port`. Utiliser ces deux méthodes partout — `_sync_prompt`, `_read_until`, `send_cmd`, `write_file`, `close` — plus aucun appel direct à `self._serial.read`/`.write` ailleurs dans la classe.
+Toute exception `serial.SerialException` levée lors des opérations bas niveau (`connect`, `send_cmd`, `write_file`, `list_dir`, `close`, `_read_until`, `_write_bytes`) doit être interceptée et transformée en `FlipperClientError` avec un message clair en français. Aucun traceback brut `pyserial` ne doit remonter à l'appelant.
 
-### Défaut 4 — `send_cmd` ignore `dry_run` (`flipper_client.py:119-133`)
+### Défaut 4 — protection dry_run sur `send_cmd`
 
-`send_cmd` est publique et n'inspecte jamais `self.dry_run` : rien n'empêche aujourd'hui `client.send_cmd("storage remove /ext/apps")` de s'exécuter alors que `dry_run=True`. Les trois méthodes de haut niveau (`mkdir`, `write_file`, `backup_item`) court-circuitent déjà correctement avant d'appeler `send_cmd` — ce défaut ne les affecte pas directement, mais `send_cmd` reste un point d'entrée générique (utilisé tel quel par `tache-09` pour ses diagnostics). Ajouter en tête de `send_cmd` : si le premier mot de `command` appartient à `{"write", "mkdir", "remove", "rename", "format"}` et que `self.dry_run` est vrai, lever `FlipperClientError` **avant tout envoi sur le port** — vérifiable en observant que le mock n'a reçu aucun octet. Les commandes de lecture (`list`, `read`, `gpio`, `info`, ...) doivent continuer à s'exécuter normalement quel que soit `dry_run`.
+`send_cmd` doit refuser d'exécuter des commandes de modification/écriture (`storage remove`, `storage mkdir`, etc.) lorsque `dry_run=True`, en levant `FlipperClientError` (« Commande d'écriture bloquée en mode simulation ») et sans envoyer d'octets sur le port. Les commandes de lecture (`storage list`, `storage info`, etc.) restent autorisées.
 
-### Critères d'acceptation (remplacent ceux de la fiche d'origine pour ce module)
+### Critères d'acceptation
 
-- [ ] `list_dir` sur un mock renvoyant `"	[D] apps
-	[F] key.sub 1024b
-"` produit exactement `[StorageItem(name="apps", is_dir=True, size=0), StorageItem(name="key.sub", is_dir=False, size=1024)]`
-- [ ] `list_dir` sur un mock renvoyant `"	Empty
-"` renvoie `[]` sans lever d'erreur
-- [ ] `write_file(..., dry_run=False)` sur un mock fidèle (instruction sans prompt, puis prompt uniquement après réception d'un octet `0x03`) réussit : le mock a bien reçu `content` suivi de l'octet `0x03`, la fonction retourne `True`
-- [ ] `write_file(..., dry_run=False)` sur un mock renvoyant `"Storage error: fichier verrouillé
-"` immédiatement après la commande lève `FlipperCommandError` contenant ce message, et le mock n'a reçu ni `content` ni ETX
-- [ ] une `serial.SerialException` levée par le mock à n'importe quel point de `connect`, `send_cmd`, `write_file`, `list_dir` ou `close` est interceptée et relevée en `FlipperClientError` en français — aucun test ne doit observer de `serial.SerialException` ou de traceback brut en sortie de ces méthodes
-- [ ] `client.send_cmd("storage remove /ext/apps")` avec `dry_run=True` lève `FlipperClientError` et le mock n'a reçu aucun octet
-- [ ] `client.send_cmd("storage list /ext")` avec `dry_run=True` s'exécute normalement (pas de régression sur les lectures)
-- [ ] tout `MockSerialClient` utilisé dans `tests/test_flipper_client.py` reproduit **littéralement** les chaînes citées plus haut (tirées de `storage_cli.c`) — aucun format inventé, aucune adaptation « pour que le test passe »
-- [ ] `pytest tests/test_flipper_client.py` et la suite complète passent ; `ruff check .` et `ruff format --check .` ne signalent rien
-- [ ] aucun fichier hors périmètre touché
+- [x] `list_dir` sur un mock renvoyant `"\t[D] apps\r\n\t[F] key.sub 1024b\r\n"` produit exactement `[StorageItem(name="apps", is_dir=True, size=0), StorageItem(name="key.sub", is_dir=False, size=1024)]`
+- [x] `list_dir` sur un mock renvoyant `"\tEmpty\r\n"` renvoie `[]` sans lever d'erreur
+- [x] `write_file(..., dry_run=False)` sur un mock fidèle (instruction sans prompt, puis prompt uniquement après réception d'un octet `0x03`) réussit : le mock a bien reçu `content` suivi de l'octet `0x03`, la fonction retourne `True`
+- [x] `write_file(..., dry_run=False)` sur un mock renvoyant `"Storage error: fichier verrouillé\r\n"` immédiatement après la commande lève `FlipperCommandError` contenant ce message, et le mock n'a reçu ni `content` ni ETX
+- [x] une `serial.SerialException` levée par le mock à n'importe quel point de `connect`, `send_cmd`, `write_file`, `list_dir` ou `close` est interceptée et relevée en `FlipperClientError` en français — aucun test ne doit observer de `serial.SerialException` ou de traceback brut en sortie de ces méthodes
+- [x] `client.send_cmd("storage remove /ext/apps")` avec `dry_run=True` lève `FlipperClientError` et le mock n'a reçu aucun octet
+- [x] `client.send_cmd("storage list /ext")` avec `dry_run=True` s'exécute normalement (pas de régression sur les lectures)
+- [x] tout `MockSerialClient` utilisé dans `tests/test_flipper_client.py` reproduit **littéralement** les chaînes citées plus haut (tirées de `storage_cli.c`) — aucun format inventé, aucune adaptation « pour que le test passe »
+- [x] `pytest tests/test_flipper_client.py` et la suite complète passent ; `ruff check .` et `ruff format --check .` ne signalent rien
+- [x] aucun fichier hors périmètre touché
 
 ### Condition d'arrêt supplémentaire
 
 Si l'algorithme de `write_file` décrit ci-dessus s'avère, à l'exécution contre un vrai Flipper, ne pas correspondre exactement au comportement observé (par exemple un délai entre l'instruction et la disponibilité réelle du mode saisie), **s'arrêter et remonter l'écart plutôt que d'ajuster silencieusement le mock pour qu'il corresponde au code** — c'est exactement le geste qui a produit les trois précédentes fiches rejetées sur ce module.
-
-

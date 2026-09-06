@@ -193,6 +193,7 @@ Appliquer cette fonction à `category` et à `filename` avant de construire l'`A
 Aucune contrainte de préfixe ni de traversée n'est appliquée. Ajouter, après la vérification de type existante :
 ```python
 import posixpath
+
 ...
 if not destination.startswith("/"):
     raise ValueError(

@@ -151,3 +151,57 @@ Leçon d'aiguillage : mal aiguillée. Cette tâche s'appuie directement sur
 
 **Suite à donner** : ne pas fusionner tant que `list_dir` (tache-03) n'est pas corrigé et revérifié — refaire ensuite le test de bout en bout avec une trame conforme au vrai firmware, et gérer l'échec partiel (fichier orphelin + catalogue non généré).
 
+
+## Correction requise (fidélité des captures binaires) — 2026-09-05
+
+Ajoutée après la revue indépendante ci-dessus. « On corrige sur la même branche, on ne recommence pas » (`AGENTS.md`). Cette section complète le contrat pour `sync.py` et la lecture binaire ; l'objectif et le garde-fou SD de la fiche ne changent pas.
+
+### Défaut à corriger
+
+`sync.py:86-87` : en mode réel, `sync_captures_to_local` fait `output = client.send_cmd("storage read ...")` puis `local_file.write_bytes(output.encode("utf-8", errors="replace"))`. Les captures (`.sub`, `.nfc`, `.rfid`, `.ir`, `.ibtn`, `.badusb`) sont binaires : ce passage par du texte remplace tout octet non-UTF-8 par U+FFFD et ne retire pas l'en-tête `Size: N` du firmware. La sauvegarde produit des fichiers corrompus. Aucun test ne le rattrape (les mocks renvoient du texte propre) : le défaut reste invisible tant qu'on ne lit pas de vrais octets.
+
+### Agent assigné
+
+**Opus (Claude Code).** Lecture d'un flux binaire sur l'appareil, dépendante du format de trame `storage read` : c'est du protocole matériel, la classe même d'erreur que le mock rend indétectable (le mock devient la spécification). `AGENTS.md` attribue « toute écriture sur l'appareil, gestion d'erreurs matérielles » à Opus ; la lecture binaire fidèle relève du même jugement.
+
+### Périmètre
+
+Fichiers à créer ou modifier, et eux seuls :
+
+```text
+src/momentum_ultra/flipper_client.py
+src/momentum_ultra/sync.py
+tests/test_flipper_client.py
+tests/test_sync.py
+taches/tache-11-sync-captures.md
+```
+
+### Contrat
+
+Ajouter à `FlipperClient` une lecture binaire fidèle, distincte de `send_cmd` :
+
+```python
+def read_file(self, path: str) -> bytes:
+    """Read a file from the SD card as raw bytes (never decoded as text)."""
+```
+
+Séquence réelle de `storage read <path>` (firmware Flipper) : le firmware répond `Size: <n>\r\n`, puis exactement `<n>` octets bruts, puis le prompt `>: `. L'implémentation doit :
+
+1. écrire `storage read <path>\r\n` ;
+2. lire la ligne d'en-tête et en extraire `<n>` ; sur `Storage error`, lever `FlipperCommandError` ;
+3. lire exactement `<n>` octets bruts, sans décodage ;
+4. consommer le prompt final.
+
+`sync_captures_to_local` écrit ces octets tels quels : `local_file.write_bytes(client.read_file(item.remote_path))`. `total_bytes` reflète les octets réellement écrits.
+
+### Critères d'acceptation
+
+- [ ] `pytest` passe ; `ruff check .` et `ruff format --check .` ne signalent rien.
+- [ ] Round-trip binaire : une capture contenant des octets non-UTF-8 (p. ex. `b"\x00\x01\x89PNG\xff\xfe"`) est restituée identique octet pour octet, via un `MockSerial` qui émet `Size:` + octets bruts + prompt.
+- [ ] L'en-tête `Size: N` n'apparaît jamais dans le fichier sauvegardé.
+- [ ] Garde-fou SD intact : aucune commande autre que `storage list`/`storage read` émise ; aucune écriture ni suppression sur la carte.
+
+### Conditions d'arrêt
+
+- La séquence réelle de `storage read` diffère de celle décrite → s'arrêter et demander, ne pas re-deviner un format.
+- Une lecture binaire fiable exigerait de modifier le contrat public de `send_cmd` → s'arrêter et demander.

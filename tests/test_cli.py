@@ -34,30 +34,40 @@ class MockSerialClient:
         self.is_open: bool = True
         self.written: list[bytes] = []
         self.response_text = response_text
+        self._current_queue: bytes = b"\r\n>: "
 
     def open(self) -> None:
         """Reopen mock stream."""
         self.is_open = True
 
     def write(self, data: bytes) -> int:
-        """Record written bytes."""
+        """Record written bytes and prepare realistic firmware response."""
         self.is_open = True
         self.written.append(data)
+        if data.startswith(b"storage write"):
+            self._current_queue = b"Just write your text data. New line by Ctrl+Enter, exit by Ctrl+C.\r\n"
+        elif data == b"\x03":
+            self._current_queue = b"\r\n>: "
+        elif self.response_text and data not in (b"\r\n", b""):
+            self._current_queue = f"{self.response_text}\r\n>: ".encode()
+            self.response_text = ""
+        else:
+            self._current_queue = b"\r\n>: "
         return len(data)
 
     def read(self, size: int = 1) -> bytes:
-        """Return prompt marker with optional response text."""
+        """Return bytes from response queue or prompt marker."""
         self.is_open = True
-        last_written = self.written[-1] if self.written else b""
-        if self.response_text and last_written not in (b"\r\n", b""):
-            out = f"{self.response_text}\r\n>: ".encode()
-            self.response_text = ""
-            return out
+        if self._current_queue:
+            chunk = self._current_queue[:size]
+            self._current_queue = self._current_queue[size:]
+            return chunk
         return b">: "
 
     def reset_input_buffer(self) -> None:
         """Stub reset buffer."""
         self.is_open = True
+        self._current_queue = b"\r\n>: "
 
     def close(self) -> None:
         """Close mock stream."""
