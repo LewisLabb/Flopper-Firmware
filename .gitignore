@@ -15,3 +15,8 @@ build/
 # Testing & Linting cache
 .pytest_cache/
 .ruff_cache/
+
+# Editor / IDE workspace files
+*.code-workspace
+.vscode/
+.idea/
