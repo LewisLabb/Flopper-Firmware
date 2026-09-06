@@ -215,12 +215,12 @@ Si `content` n'est ni `str` ni déjà `bytes` (un entier, par exemple), il est a
 
 ### Critères d'acceptation (remplacent ceux de la fiche d'origine pour ce module)
 
-- [ ] un manifeste avec `destination_path="../../../../etc/passwd"` lève `ValueError` dans `load_manifest_from_dict`, avant toute génération de plan
-- [ ] un manifeste avec `destination_path="/ext/apps/../../../int/x.fap"` lève `ValueError` (traversée détectée après normalisation)
-- [ ] un manifeste avec `destination_path="/int/firmware_critical/override.bin"` lève `ValueError` (hors `/ext/`)
-- [ ] un manifeste avec `category="../../../int"` (ou tout `category`/`filename` contenant `/`) lève `ValueError`
-- [ ] un manifeste avec `category={"a": 1}` (type invalide) lève `ValueError`, pas de coercition silencieuse en chaîne
-- [ ] un manifeste avec `content=12345` (ni `str` ni `bytes`) lève `TypeError`
-- [ ] un manifeste valide, avec des chemins conformes sous `/ext/`, continue de produire un plan d'installation identique à avant (non-régression — rejouer les cas nominaux existants de `test_manifest.py`)
-- [ ] `pytest` (suite complète) et `ruff check .` / `ruff format --check .` ne signalent rien
-- [ ] aucun fichier hors périmètre touché
+- [x] un manifeste avec `destination_path="../../../../etc/passwd"` lève `ValueError` dans `load_manifest_from_dict`, avant toute génération de plan
+- [x] un manifeste avec `destination_path="/ext/apps/../../../int/x.fap"` lève `ValueError` (traversée détectée après normalisation)
+- [x] un manifeste avec `destination_path="/int/firmware_critical/override.bin"` lève `ValueError` (hors `/ext/`)
+- [x] un manifeste avec `category="../../../int"` (ou tout `category`/`filename` contenant `/`) lève `ValueError`
+- [x] un manifeste avec `category={"a": 1}` (type invalide) lève `ValueError`, pas de coercition silencieuse en chaîne
+- [x] un manifeste avec `content=12345` (ni `str` ni `bytes`) lève `TypeError`
+- [x] un manifeste valide, avec des chemins conformes sous `/ext/`, continue de produire un plan d'installation identique à avant (non-régression — rejouer les cas nominaux existants de `test_manifest.py`)
+- [x] `pytest` (suite complète) et `ruff check .` / `ruff format --check .` ne signalent rien
+- [x] aucun fichier hors périmètre touché

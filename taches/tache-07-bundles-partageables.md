@@ -126,4 +126,89 @@ Leçon d'aiguillage : mal aiguillée pour sa moitié critique. La plomberie
 ```
 
 **Suite à donner** : ne pas fusionner. Ajouter un confinement strict des chemins (racine `/ext/`, rejet de toute segment `..`) dans les deux branches d'import, une vraie vérification d'intégrité (checksum ou a minima un schéma strict), et corriger `cli.py:252` pour que l'avertissement WORLD ne dépende jamais de la présence d'un bundle.
+---
 
+## Correction requise (priorité 5, après fusion de la correction de tache-04) — 2026-09-06
+
+Cette section **remplace la partie « Contrat » de la fiche pour `bundle.py`** — périmètre inchangé (`src/momentum_ultra/bundle.py`, `src/momentum_ultra/cli.py`, `tests/test_bundle.py`, `tests/test_cli.py`, cette fiche). On corrige sur la même branche.
+
+**Condition préalable** : cette correction suppose que la correction de `tache-04` (confinement `/ext/` et validation stricte des segments de chemin dans `manifest.py::load_manifest_from_dict`) est déjà fusionnée. Si ce n'est pas le cas, appliquer d'abord `tache-04` — sinon les critères de confinement ci-dessous échoueraient pour la mauvaise raison (le trou serait encore dans `manifest.py`, pas dans `bundle.py`).
+
+### Défaut 1 — la branche `.tar.gz` d'`import_bundle` reconstruit les entrées à la main, sans passer par la validation (`bundle.py:111-147`)
+
+Contrairement à la branche `.json` (`bundle.py:86-93`, qui appelle déjà `load_manifest_from_dict`), la branche archive construit directement des `AppEntry`/`AssetEntry` à partir du JSON interne, sans jamais appeler `load_manifest_from_dict`. Résultat : même une fois `tache-04` fusionnée, un bundle `.tar.gz` forgé contournerait entièrement sa validation — seule la branche `.json` en bénéficierait.
+
+Corriger en unifiant les deux branches sur le même chemin de validation : dans la branche archive, injecter le contenu binaire lu depuis le tar directement dans les dictionnaires `app_meta`/`asset_meta` sous la clé `"content"`, puis appeler `load_manifest_from_dict(data)` sur le dictionnaire ainsi complété, au lieu de construire les dataclasses à la main :
+```python
+for app_meta in data.get("apps", []):
+    arc_path = app_meta.get("bundle_path")
+    content = b""
+    if arc_path:
+        try:
+            f = tar.extractfile(arc_path)
+            if f is not None:
+                content = f.read()
+        except KeyError:
+            pass
+    app_meta["content"] = content
+
+for asset_meta in data.get("assets", []):
+    arc_path = asset_meta.get("bundle_path")
+    content = b""
+    if arc_path:
+        try:
+            f = tar.extractfile(arc_path)
+            if f is not None:
+                content = f.read()
+        except KeyError:
+            pass
+    asset_meta["content"] = content
+
+return load_manifest_from_dict(data)
+```
+`load_manifest_from_dict` ignore silencieusement les clés qu'elle ne connaît pas (`bundle_path`), donc aucune incompatibilité. Les blocs `try/except KeyError` existants autour de `tar.extractfile` restent inchangés — seule la construction finale change (plus d'`AppEntry(...)`/`AssetEntry(...)` manuels).
+
+### Défaut 2 — aucune somme de contrôle, malgré une « validation d'intégrité » auto-déclarée (`bundle.py`)
+
+Ajouter une vérification best-effort par SHA256 — pas une exigence stricte, pour rester compatible avec un manifeste externe minimal non produit par `export_bundle`.
+
+Dans `export_bundle`, ajouter le champ `"sha256"` à chaque `app_meta`/`asset_meta` :
+```python
+import hashlib
+...
+"sha256": hashlib.sha256(app_data).hexdigest(),
+```
+(et de même pour `asset_meta`, avec `asset_data`).
+
+Dans `import_bundle` (branche archive), juste après la lecture du contenu et avant de l'injecter dans `app_meta`/`asset_meta` :
+```python
+expected = app_meta.get("sha256")  # ou asset_meta.get("sha256")
+if expected and hashlib.sha256(content).hexdigest() != expected:
+    raise BundleError(
+        f"Somme de contrôle invalide pour '{arc_path}' dans le bundle "
+        f"'{bundle_path}' (fichier corrompu ou altéré)."
+    )
+```
+Si `sha256` est absent (bundle externe minimal), aucune erreur n'est levée — vérification best-effort, à documenter comme telle dans le docstring d'`import_bundle`.
+
+### Défaut 3 — régression : `--bundle` supprime l'avertissement légal WORLD (`cli.py:252`)
+
+```python
+if profile.code == RegionCode.WORLD and not bundle_path:
+```
+Le `and not bundle_path` n'a aucune justification dans le contrat : la région appliquée (`profile.code`) est indépendante de l'origine du pack d'applications. Retirer la condition :
+```python
+if profile.code == RegionCode.WORLD:
+```
+
+### Critères d'acceptation (remplacent ceux de la fiche d'origine)
+
+- [x] un bundle `.tar.gz` forgé dont le `manifest.json` interne contient un asset avec `destination_path="../../../../etc/cron.d/evil"` est rejeté par `import_bundle` (`ValueError`/`BundleError`), avant toute génération de plan d'installation
+- [x] un bundle `.tar.gz` forgé avec `category="../../../home/claude/.ssh"` sur une app est rejeté de la même façon
+- [x] `export_bundle` puis `import_bundle` sur un pack valide reconstitue fidèlement le `PackManifest` (non-régression de l'aller-retour existant, apps et assets confondus)
+- [x] `manifest.json` produit par `export_bundle` contient un champ `sha256` pour chaque entrée `apps`/`assets`
+- [x] un bundle dont un fichier a été altéré après export (contenu modifié dans l'archive tar, `sha256` du manifeste resté inchangé) fait lever `BundleError` par `import_bundle`, avant toute utilisation du contenu altéré
+- [x] un bundle `.tar.gz` minimal sans champ `sha256` (simulant un manifeste externe non produit par `export_bundle`) continue de s'importer sans erreur
+- [x] `main(["--install", "--region", "WORLD", "--bundle", "<bundle valide>", "--dry-run"])` affiche l'avertissement légal WORLD (non-régression du point cli.py:252)
+- [x] `pytest` (suite complète) et `ruff check .` / `ruff format --check .` ne signalent rien
+- [x] aucun fichier hors périmètre touché

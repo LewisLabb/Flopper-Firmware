@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 
 from momentum_ultra.badusb import export_payload_assets, get_default_payloads
@@ -20,6 +21,7 @@ from momentum_ultra.manifest import (
 from momentum_ultra.modules import ModuleType, export_modules_settings
 from momentum_ultra.regions import (
     RegionCode,
+    RegionProfile,
     export_region_config,
     get_region_profile,
 )
@@ -44,15 +46,7 @@ def get_default_pack(
     theme_assets = get_theme_assets(theme_profile)
     dict_assets = export_dictionary_assets(get_default_dictionaries())
     payload_assets = export_payload_assets(get_default_payloads())
-    modules_list = (
-        modules
-        if modules is not None
-        else [
-            ModuleType.CC1101,
-            ModuleType.NRF24,
-            ModuleType.ESP32_MARAUDER,
-        ]
-    )
+    modules_list = modules if modules is not None else []
     modules_data = export_modules_settings(modules_list)
 
     return PackManifest(
@@ -130,3 +124,25 @@ def execute_install_plan(
         results.append(f"[{prefix}] {action.description}")
 
     return results
+
+
+def build_region_settings_action(profile: RegionProfile) -> PlanAction:
+    """Build the install-plan action that writes the region-specific settings file."""
+    content = json.dumps(export_region_config(profile), indent=2).encode()
+    return PlanAction(
+        action_type=ActionType.WRITE_FILE,
+        target_path="/ext/settings/region.json",
+        source_content=content,
+        description="Écriture du profil régional dans /ext/settings/region.json",
+    )
+
+
+def build_modules_settings_action(active_modules: list[ModuleType]) -> PlanAction:
+    """Build the install-plan action that writes the modules settings file."""
+    content = json.dumps(export_modules_settings(active_modules), indent=2).encode()
+    return PlanAction(
+        action_type=ActionType.WRITE_FILE,
+        target_path="/ext/settings/modules.json",
+        source_content=content,
+        description="Écriture de la configuration des modules dans /ext/settings/modules.json",
+    )

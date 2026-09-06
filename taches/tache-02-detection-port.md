@@ -201,9 +201,9 @@ Sans effet sur Windows (paramètre ignoré, déjà exclusif par nature), correct
 
 ### Critères d'acceptation (remplacent ceux de la fiche d'origine pour ce module)
 
-- [ ] Sur une plateforme POSIX (ou par un test qui inspecte les arguments passés à `serial.Serial`), `is_port_available` ouvre bien le port avec `exclusive=True`
-- [ ] Un port déjà ouvert par un autre processus (simulé par le mock levant `SerialException`) fait toujours renvoyer `False` par `is_port_available` — non-régression
-- [ ] `find_flipper()` sur un mock où `comports()` lève `serial.SerialException` lève `FlipperEnumerationError` (sous-classe de `FlipperDeviceError`) avec un message en français — pas de traceback brut
-- [ ] `main(["--detect"])` sur ce même mock affiche le message français sur `stderr` et retourne `1` — vérifié en appelant `main()`, pas seulement `find_flipper()` en isolation, pour confirmer que `cli.py` n'a pas besoin d'être modifié
-- [ ] `pytest` (suite complète) et `ruff check .` / `ruff format --check .` ne signalent rien
-- [ ] aucun fichier hors périmètre touché
+- [x] Sur une plateforme POSIX (ou par un test qui inspecte les arguments passés à `serial.Serial`), `is_port_available` ouvre bien le port avec `exclusive=True`
+- [x] Un port déjà ouvert par un autre processus (simulé par le mock levant `SerialException`) fait toujours renvoyer `False` par `is_port_available` — non-régression
+- [x] `find_flipper()` sur un mock où `comports()` lève `serial.SerialException` lève `FlipperEnumerationError` (sous-classe de `FlipperDeviceError`) avec un message en français — pas de traceback brut
+- [x] `main(["--detect"])` sur ce même mock affiche le message français sur `stderr` et retourne `1` — vérifié en appelant `main()`, pas seulement `find_flipper()` en isolation, pour confirmer que `cli.py` n'a pas besoin d'être modifié
+- [x] `pytest` (suite complète) et `ruff check .` / `ruff format --check .` ne signalent rien
+- [x] aucun fichier hors périmètre touché

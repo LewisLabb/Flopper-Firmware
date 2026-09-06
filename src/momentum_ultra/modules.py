@@ -98,33 +98,6 @@ def get_default_module_configs() -> dict[ModuleType, ModuleConfig]:
     return dict(_DEFAULT_CONFIGS)
 
 
-def detect_connected_modules(raw_gpio_output: str) -> list[ModuleType]:
-    """Parse Flipper GPIO response or SPI probe output to identify connected modules."""
-    text = raw_gpio_output.lower()
-    detected: list[ModuleType] = []
-
-    # Detect Combo first if dual signature is present
-    if ("cc1101" in text and "nrf24" in text) or "combo" in text or "2in1" in text:
-        detected.append(ModuleType.COMBO_2IN1)
-        return detected
-
-    if "cc1101" in text or "subghz_ext" in text:
-        detected.append(ModuleType.CC1101)
-
-    if "nrf24" in text or "mousejacker" in text:
-        detected.append(ModuleType.NRF24)
-
-    if (
-        "esp32" in text
-        or "marauder" in text
-        or "uart_bridge" in text
-        or "wifi_dev" in text
-    ):
-        detected.append(ModuleType.ESP32_MARAUDER)
-
-    return detected
-
-
 def export_modules_settings(active_modules: list[ModuleType]) -> dict[str, Any]:
     """Export active modules configuration dictionary for /ext/settings/modules.json."""
     configs = get_default_module_configs()

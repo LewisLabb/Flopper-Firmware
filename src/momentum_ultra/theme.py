@@ -1,4 +1,4 @@
-"""Momentum UI theme profiles and visual customization management."""
+"""Custom preference-profile management for Momentum Ultra (not native Momentum asset packs)."""
 
 import json
 from dataclasses import dataclass
@@ -109,13 +109,21 @@ def export_theme_settings(profile: ThemeProfile) -> dict[str, Any]:
 
 
 def get_theme_assets(profile: ThemeProfile) -> list[AssetEntry]:
-    """Return theme-specific asset entries for dolphin/animations."""
+    """Return this project's own preference-profile asset entries.
+
+    Ceci configure un profil de préférences interne à Momentum Ultra, PAS un
+    asset pack Momentum natif (pas de frames .bm/.bmx, pas de manifest.txt).
+    Sans effet sur l'affichage réel d'un Flipper sous Momentum tant que le
+    format natif des asset packs n'est pas implémenté séparément.
+    """
     settings_data = export_theme_settings(profile)
     manifest_bytes = json.dumps(settings_data, indent=2).encode("utf-8")
     dolphin_info = (
-        f"Momentum Dolphin Theme: {profile.title}\n"
-        f"Pack: {profile.animations_pack}\n"
-        f"Status bar: {profile.status_bar.value}\n"
+        f"Momentum Ultra — profil de préférences : {profile.title}\n"
+        f"Pack : {profile.animations_pack}\n"
+        f"Barre d'état : {profile.status_bar.value}\n"
+        "Ce fichier ne modifie pas l'affichage natif de Momentum : c'est une "
+        "extension de préférences propre à Momentum Ultra.\n"
     ).encode()
 
     return [
@@ -124,7 +132,7 @@ def get_theme_assets(profile: ThemeProfile) -> list[AssetEntry]:
             content=manifest_bytes,
         ),
         AssetEntry(
-            destination_path="/ext/dolphin/theme_info.txt",
+            destination_path="/ext/settings/momentum_ui_info.txt",
             content=dolphin_info,
         ),
     ]

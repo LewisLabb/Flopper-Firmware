@@ -27,6 +27,10 @@ class FlipperPortBusyError(FlipperDeviceError):
     """Raised when the Flipper Zero serial port is in use by another application."""
 
 
+class FlipperEnumerationError(FlipperDeviceError):
+    """Raised when serial port enumeration fails due to an OS or hardware error."""
+
+
 @dataclass(frozen=True)
 class FlipperDevice:
     """Represents a detected Flipper Zero device."""
@@ -38,7 +42,13 @@ class FlipperDevice:
 
 def find_flipper() -> FlipperDevice:
     """Find a connected Flipper Zero using USB VID and PID."""
-    ports = serial.tools.list_ports.comports()
+    try:
+        ports = serial.tools.list_ports.comports()
+    except (serial.SerialException, OSError) as exc:
+        raise FlipperEnumerationError(
+            f"Impossible d'énumérer les ports série : {exc}"
+        ) from exc
+
     flippers = [p for p in ports if p.vid == FLIPPER_VID and p.pid == FLIPPER_PID]
 
     if not flippers:
@@ -62,7 +72,7 @@ def find_flipper() -> FlipperDevice:
 def is_port_available(port: str) -> bool:
     """Check if a serial port can be opened without conflict."""
     try:
-        ser = serial.Serial(port=port, timeout=1.0)
+        ser = serial.Serial(port=port, timeout=1.0, exclusive=True)
         ser.close()
         return True
     except (serial.SerialException, OSError):

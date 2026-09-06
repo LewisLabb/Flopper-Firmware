@@ -11,6 +11,7 @@ from momentum_ultra.device import (
     FLIPPER_PID,
     FLIPPER_VID,
     FlipperDevice,
+    FlipperEnumerationError,
     FlipperNotFoundError,
     MultipleFlipperFoundError,
     find_flipper,
@@ -84,7 +85,7 @@ def test_is_port_available_success() -> None:
     mock_serial_instance = MagicMock()
     with patch("serial.Serial", return_value=mock_serial_instance) as mock_serial:
         assert is_port_available("COM3") is True
-        mock_serial.assert_called_once_with(port="COM3", timeout=1.0)
+        mock_serial.assert_called_once_with(port="COM3", timeout=1.0, exclusive=True)
         mock_serial_instance.close.assert_called_once()
 
 
@@ -98,3 +99,25 @@ def test_is_port_available_os_error() -> None:
     """Test is_port_available returns False when port opening raises OSError."""
     with patch("serial.Serial", side_effect=OSError("Device not configured")):
         assert is_port_available("COM3") is False
+
+
+def test_find_flipper_enumeration_serial_exception() -> None:
+    """Test find_flipper raises FlipperEnumerationError on SerialException."""
+    with patch(
+        "serial.tools.list_ports.comports",
+        side_effect=serial.SerialException("Access denied"),
+    ):
+        with pytest.raises(FlipperEnumerationError) as exc_info:
+            find_flipper()
+        assert "Impossible d'énumérer les ports série" in str(exc_info.value)
+
+
+def test_find_flipper_enumeration_os_error() -> None:
+    """Test find_flipper raises FlipperEnumerationError on OSError."""
+    with patch(
+        "serial.tools.list_ports.comports",
+        side_effect=OSError("I/O failure"),
+    ):
+        with pytest.raises(FlipperEnumerationError) as exc_info:
+            find_flipper()
+        assert "Impossible d'énumérer les ports série" in str(exc_info.value)

@@ -3,9 +3,21 @@
 from __future__ import annotations
 
 import json
+import posixpath
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
+
+
+def _validate_path_segment(value: object, field_name: str) -> str:
+    """Validate that value is a valid single path segment."""
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"Le champ '{field_name}' doit être une chaîne non vide.")
+    if "/" in value or "\\" in value or value in {".", ".."}:
+        raise ValueError(
+            f"Le champ '{field_name}' ne doit pas contenir de séparateur ni être '.' ou '..' : {value!r}"
+        )
+    return value
 
 
 class ActionType(str, Enum):
@@ -88,14 +100,23 @@ def load_manifest_from_dict(data: dict[str, Any]) -> PackManifest:
             raise ValueError(
                 "Chaque application doit spécifier 'name', 'category' et 'filename'."
             )
+        if not isinstance(app_name, str):
+            raise TypeError("Le champ 'name' d'une application doit être une chaîne.")
+        clean_category = _validate_path_segment(category, "category")
+        clean_filename = _validate_path_segment(filename, "filename")
+
         content = item.get("content", b"")
         if isinstance(content, str):
             content = content.encode()
+        if not isinstance(content, bytes):
+            raise TypeError(
+                f"Le champ 'content' doit être une chaîne ou des octets, reçu {type(content).__name__}."
+            )
         apps.append(
             AppEntry(
-                name=str(app_name),
-                category=str(category),
-                filename=str(filename),
+                name=app_name,
+                category=clean_category,
+                filename=clean_filename,
                 content=content,
             )
         )
@@ -113,10 +134,24 @@ def load_manifest_from_dict(data: dict[str, Any]) -> PackManifest:
             raise ValueError(
                 "Chaque asset doit spécifier un 'destination_path' valide."
             )
+        if not destination.startswith("/"):
+            raise ValueError(
+                f"'destination_path' doit être un chemin absolu commençant par /ext/ : {destination!r}"
+            )
+        normalized = posixpath.normpath(destination)
+        if normalized != "/ext" and not normalized.startswith("/ext/"):
+            raise ValueError(
+                f"'destination_path' doit rester sous /ext/ une fois normalisé : "
+                f"{destination!r} -> {normalized!r}"
+            )
         content = item.get("content", b"")
         if isinstance(content, str):
             content = content.encode()
-        assets.append(AssetEntry(destination_path=str(destination), content=content))
+        if not isinstance(content, bytes):
+            raise TypeError(
+                f"Le champ 'content' doit être une chaîne ou des octets, reçu {type(content).__name__}."
+            )
+        assets.append(AssetEntry(destination_path=normalized, content=content))
 
     settings = data.get("settings", {})
     if not isinstance(settings, dict):

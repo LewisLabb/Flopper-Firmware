@@ -14,15 +14,33 @@ from momentum_ultra.device import (
     is_port_available,
 )
 from momentum_ultra.flipper_client import FlipperClient, FlipperClientError
-from momentum_ultra.installer import execute_install_plan, get_default_pack
-from momentum_ultra.manifest import generate_install_plan
-from momentum_ultra.modules import (
-    detect_connected_modules,
-    get_default_module_configs,
+from momentum_ultra.installer import (
+    build_modules_settings_action,
+    build_region_settings_action,
+    execute_install_plan,
+    get_default_pack,
 )
-from momentum_ultra.regions import RegionCode, get_available_regions, get_region_profile
+from momentum_ultra.manifest import generate_install_plan
+from momentum_ultra.modules import ModuleType, get_default_module_configs
+from momentum_ultra.regions import RegionCode, get_region_profile
 from momentum_ultra.sync import sync_captures_to_local
 from momentum_ultra.theme import get_available_themes, get_theme_profile
+
+
+def _parse_modules_arg(raw: str) -> list[ModuleType]:
+    """Parse the --modules comma-separated list into ModuleType values."""
+    result: list[ModuleType] = []
+    for token in raw.split(","):
+        if not (token := token.strip().lower()):
+            continue
+        try:
+            result.append(ModuleType(token))
+        except ValueError as exc:
+            valid = ", ".join(m.value for m in ModuleType)
+            raise ValueError(
+                f"Module inconnu '{token}'. Modules valides : {valid}."
+            ) from exc
+    return result
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -31,62 +49,52 @@ def _build_parser() -> argparse.ArgumentParser:
         prog="momentum-ultra",
         description="Outil de préparation post-flash pour Flipper Zero sous Momentum.",
     )
-    parser.add_argument(
-        "--version", action="version", version=__version__, help="Affiche la version."
-    )
-    parser.add_argument(
+    add = parser.add_argument
+    add("--version", action="version", version=__version__, help="Affiche la version.")
+    add(
         "--dry-run",
         action=argparse.BooleanOptionalAction,
         default=True,
-        help="Mode simulation (défaut: True).",
+        help="Mode simulation.",
     )
-    parser.add_argument(
-        "--detect", action="store_true", help="Vérifie la connexion du Flipper Zero."
-    )
-    parser.add_argument(
+    add("--detect", action="store_true", help="Vérifie la connexion du Flipper Zero.")
+    add(
         "--diagnose-modules",
         action="store_true",
         help="Diagnostique les modules GPIO connectés.",
     )
-    parser.add_argument(
+    add(
+        "--modules",
+        metavar="LISTE",
+        default="",
+        help="Modules externes connectés séparés par virgules (cc1101, nrf24, esp32, combo_2in1).",
+    )
+    add(
         "--install",
         "--prepare",
         dest="install",
         action="store_true",
-        help="Installe le pack Momentum Ultra.",
+        help="Installe le pack.",
     )
-    parser.add_argument(
-        "-y", "--yes", action="store_true", help="Confirme automatiquement l'écriture."
-    )
-    valid_regions = [r.value for r in get_available_regions()]
-    parser.add_argument(
-        "--region",
-        default="EU",
-        choices=valid_regions + [r.lower() for r in valid_regions],
-        help="Profil régional radio (EU, US, JP, WORLD).",
-    )
+    add("-y", "--yes", action="store_true", help="Confirme automatiquement l'écriture.")
+    add("--region", default="EU", help="Profil régional radio (EU, US, JP, WORLD).")
     valid_themes = [t.value for t in get_available_themes()]
-    parser.add_argument(
+    add(
         "--theme",
         default="default",
         choices=valid_themes + [t.lower() for t in valid_themes],
-        help="Thème visuel Momentum.",
+        help=(
+            "Profil de préférences visuelles Momentum Ultra (extension propre à "
+            "ce projet : n'installe pas d'asset pack Momentum natif)."
+        ),
     )
-    parser.add_argument(
-        "--bundle", metavar="FICHIER", help="Chemin vers un bundle personnalisé."
-    )
-    parser.add_argument(
-        "--export-bundle", metavar="FICHIER", help="Exporte vers un bundle .tar.gz."
-    )
-    parser.add_argument(
-        "--backup-captures",
-        metavar="DOSSIER",
-        help="Sauvegarde les captures vers le dossier local.",
-    )
-    parser.add_argument(
+    add("--bundle", metavar="FICHIER", help="Chemin vers un bundle personnalisé.")
+    add("--export-bundle", metavar="FICHIER", help="Exporte vers un bundle .tar.gz.")
+    add("--backup-captures", metavar="DOSSIER", help="Sauvegarde les captures locales.")
+    add(
         "--list-payloads",
         action="store_true",
-        help="Affiche la liste des payloads BadUSB intégrés.",
+        help="Affiche la liste des payloads BadUSB.",
     )
     return parser
 
@@ -94,16 +102,21 @@ def _build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     """Run the momentum-ultra command-line interface."""
     parser = _build_parser()
-    if argv is None:
-        argv = sys.argv[1:]
-    if len(argv) == 0:
+    argv = sys.argv[1:] if argv is None else argv
+    if not argv:
         parser.print_help()
         return 0
 
     try:
         args = parser.parse_args(argv)
     except SystemExit as exc:
-        return int(exc.code) if isinstance(exc.code, int) else 1
+        return exc.code if isinstance(exc.code, int) else 1
+
+    try:
+        get_region_profile(args.region)
+    except ValueError as err:
+        print(f"Erreur : {err}", file=sys.stderr)
+        return 1
 
     if args.list_payloads:
         return _handle_list_payloads()
@@ -117,7 +130,7 @@ def main(argv: list[str] | None = None) -> int:
         return _handle_diagnose_modules()
     if args.install:
         return _handle_install(
-            args.dry_run, args.yes, args.region, args.theme, args.bundle
+            args.dry_run, args.yes, args.region, args.theme, args.bundle, args.modules
         )
     return 0
 
@@ -155,14 +168,13 @@ def _get_connected_device() -> FlipperDevice | None:
 
 def _handle_backup_captures(destination: str, dry_run: bool) -> int:
     """Handle capture synchronization to local destination folder."""
-    device = _get_connected_device()
-    if not device:
+    if not (device := _get_connected_device()):
         return 1
     try:
         with FlipperClient(port=device.port, dry_run=dry_run) as client:
-            report = sync_captures_to_local(client=client, destination_dir=destination)
+            report = sync_captures_to_local(client, destination)
             print(
-                f"Sauvegarde terminée : {len(report.synced_items)} fichiers synchronisés dans '{report.destination_dir}'."
+                f"Sauvegarde terminée : {len(report.synced_items)} fichiers synchronisés."
             )
             return 0
     except (FlipperClientError, OSError) as err:
@@ -186,38 +198,26 @@ def _handle_export_bundle(
 
 def _handle_detect() -> int:
     """Handle the --detect command flow."""
-    device = _get_connected_device()
-    if not device:
+    if not (device := _get_connected_device()):
         return 1
     print(f"Flipper Zero détecté sur {device.port}.")
     return 0
 
 
 def _handle_diagnose_modules() -> int:
-    """Handle the --diagnose-modules command flow."""
-    device = _get_connected_device()
-    if not device:
-        return 1
-
-    print(f"\n--- Diagnostic des modules GPIO sur {device.port} ---")
-    try:
-        with FlipperClient(port=device.port, dry_run=True) as client:
-            gpio_output = client.send_cmd("gpio status")
-            modules = detect_connected_modules(gpio_output)
-            all_configs = get_default_module_configs()
-
-            if not modules:
-                print("Aucun module externe détecté sur le connecteur GPIO.")
-            else:
-                print(f"Modules détectés ({len(modules)}) :")
-                for mod in modules:
-                    cfg = all_configs.get(mod)
-                    if cfg:
-                        print(f"  • {cfg.name} : {cfg.description}")
-            return 0
-    except FlipperClientError as err:
-        print(f"Erreur de communication : {err}", file=sys.stderr)
-        return 1
+    """List supported external modules and their pinout for manual verification."""
+    configs = get_default_module_configs()
+    print(
+        "\n--- Modules externes pris en charge (vérification manuelle du câblage) ---"
+    )
+    print(
+        "Le CLI série du Flipper Zero ne permet pas de détecter automatiquement\n"
+        "quel module est branché sur le connecteur GPIO. Comparez votre câblage\n"
+        "à la liste ci-dessous, puis déclarez vos modules avec --modules lors de --install.\n"
+    )
+    for cfg in configs.values():
+        print(f"  • {cfg.name} ({cfg.module_type.value}) : {cfg.description}")
+    return 0
 
 
 def _handle_install(
@@ -226,11 +226,13 @@ def _handle_install(
     region_str: str,
     theme_str: str = "default",
     bundle_path: str | None = None,
+    modules_str: str = "",
 ) -> int:
     """Handle the --install / --prepare workflow."""
     try:
         profile = get_region_profile(region_str)
         theme_profile = get_theme_profile(theme_str)
+        modules_list = _parse_modules_arg(modules_str)
     except ValueError as err:
         print(f"Erreur : {err}", file=sys.stderr)
         return 1
@@ -243,23 +245,23 @@ def _handle_install(
             print(f"Erreur de bundle : {err}", file=sys.stderr)
             return 1
     else:
-        pack = get_default_pack(region=profile.code, theme=theme_profile.name)
+        pack = get_default_pack(
+            region=profile.code, modules=modules_list, theme=theme_profile.name
+        )
 
-    device = _get_connected_device()
-    if not device:
+    if not (device := _get_connected_device()):
         return 1
 
-    if profile.code == RegionCode.WORLD and not bundle_path:
+    if profile.code == RegionCode.WORLD:
         print(
-            "\n[Avertissement Légal] Le profil WORLD déverrouille les restrictions fréquentielles."
-            "\nVous êtes légalement responsable des émissions radio selon votre juridiction locale.\n"
+            "\nAttention : Le profil WORLD déverrouille les restrictions fréquentielles. "
+            "L'utilisateur demeure légalement responsable des émissions radio selon sa "
+            "législation locale.\n"
         )
 
     if not dry_run and not auto_confirm:
-        confirm = input(
-            f"Attention : vous allez écrire sur le Flipper Zero ({device.port}). Continuer ? [o/N] "
-        )
-        if confirm.strip().lower() not in ("o", "oui", "y", "yes"):
+        prompt = f"Attention : vous allez écrire sur le Flipper Zero ({device.port}). Continuer ? [o/N] "
+        if input(prompt).strip().lower() not in ("o", "oui", "y", "yes"):
             print("Installation annulée par l'utilisateur.")
             return 0
 
@@ -269,27 +271,27 @@ def _handle_install(
     )
 
     plan = generate_install_plan(pack, backup_existing=True)
+    plan.append(build_region_settings_action(profile))
+    plan.append(build_modules_settings_action(modules_list))
     try:
         with FlipperClient(port=device.port, dry_run=dry_run) as client:
             execute_install_plan(
-                client=client,
-                plan=plan,
-                on_progress=lambda action, curr, tot: print(
-                    f"[{curr}/{tot}] {action.description}"
-                ),
+                client, plan, lambda a, c, t: print(f"[{c}/{t}] {a.description}")
             )
     except FlipperClientError as err:
         print(f"Erreur lors de la communication : {err}", file=sys.stderr)
         return 1
 
-    print("\n" + "=" * 60)
-    print("Préparation terminée avec succès !")
-    print(f"Pack installé : {pack.name} v{pack.version}")
-    print(f"Région configurée : {profile.name}")
-    print(f"Thème configuré : {theme_profile.title}")
-    print("Conseils pour le premier démarrage :")
-    print(" 1. Redémarrez votre Flipper Zero (touches Retour + Gauche).")
-    print(" 2. Retrouvez vos applications dans le menu Applications.")
-    print(" 3. Vos anciens fichiers ont été sauvegardés dans /ext/backup.")
-    print("=" * 60)
+    print(
+        f"\n{'=' * 60}\n"
+        "Préparation terminée avec succès !\n"
+        f"Pack installé : {pack.name} v{pack.version}\n"
+        f"Région configurée : {profile.name}\n"
+        f"Thème configuré : {theme_profile.title}\n"
+        "Conseils pour le premier démarrage :\n"
+        " 1. Redémarrez votre Flipper Zero (touches Retour + Gauche).\n"
+        " 2. Retrouvez vos applications dans le menu Applications.\n"
+        " 3. Vos anciens fichiers ont été sauvegardés dans /ext/backup.\n"
+        f"{'=' * 60}"
+    )
     return 0

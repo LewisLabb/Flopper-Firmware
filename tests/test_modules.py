@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import json
+
+from momentum_ultra.installer import build_modules_settings_action
+from momentum_ultra.manifest import ActionType
 from momentum_ultra.modules import (
     ModuleType,
-    detect_connected_modules,
     export_modules_settings,
     get_default_module_configs,
 )
@@ -23,45 +26,30 @@ def test_get_default_module_configs() -> None:
     assert cc1101.pinout.mosi_pin == "15"
 
 
-def test_detect_connected_modules_cc1101() -> None:
-    """Test detecting CC1101 from output."""
-    raw = "SPI device: CC1101 SubGHz_Ext initialized on pin 17"
-    detected = detect_connected_modules(raw)
-    assert detected == [ModuleType.CC1101]
+def test_export_modules_settings_empty() -> None:
+    """Test exporting empty modules configuration (default)."""
+    settings = export_modules_settings([])
+    assert settings["enabled"] is False
+    assert settings["active_modules"] == []
 
 
-def test_detect_connected_modules_nrf24() -> None:
-    """Test detecting nRF24 from output."""
-    raw = "SPI device: nRF24 2.4GHz module ready"
-    detected = detect_connected_modules(raw)
-    assert detected == [ModuleType.NRF24]
-
-
-def test_detect_connected_modules_esp32() -> None:
-    """Test detecting ESP32 Marauder from UART output."""
-    raw = "UART: ESP32 Marauder firmware v0.13.0 bridge connected"
-    detected = detect_connected_modules(raw)
-    assert detected == [ModuleType.ESP32_MARAUDER]
-
-
-def test_detect_connected_modules_combo() -> None:
-    """Test detecting Combo 2-in-1 board."""
-    raw = "Dual module: Combo 2in1 CC1101 + nRF24 attached"
-    detected = detect_connected_modules(raw)
-    assert detected == [ModuleType.COMBO_2IN1]
-
-
-def test_detect_connected_modules_none() -> None:
-    """Test detecting when no module is connected."""
-    raw = "GPIO status: all pins float"
-    detected = detect_connected_modules(raw)
-    assert detected == []
-
-
-def test_export_modules_settings() -> None:
-    """Test exporting modules settings to dictionary."""
+def test_export_modules_settings_active() -> None:
+    """Test exporting modules settings to dictionary with active modules."""
     settings = export_modules_settings([ModuleType.CC1101, ModuleType.ESP32_MARAUDER])
     assert settings["enabled"] is True
     assert len(settings["active_modules"]) == 2
     assert settings["active_modules"][0]["type"] == "cc1101"
+    assert settings["active_modules"][0]["cs_pin"] == "17"
     assert settings["active_modules"][1]["type"] == "esp32"
+
+
+def test_build_modules_settings_action() -> None:
+    """Test building the install plan action for modules settings."""
+    action = build_modules_settings_action([ModuleType.CC1101])
+    assert action.action_type == ActionType.WRITE_FILE
+    assert action.target_path == "/ext/settings/modules.json"
+    assert action.source_content is not None
+    data = json.loads(action.source_content.decode("utf-8"))
+    assert data["enabled"] is True
+    assert len(data["active_modules"]) == 1
+    assert data["active_modules"][0]["type"] == "cc1101"

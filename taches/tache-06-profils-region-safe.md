@@ -144,4 +144,76 @@ Leçon d'aiguillage : bon aiguillage (tables de fréquences déterministes, test
 ```
 
 **Suite à donner** : renvoyer à Gemini pour correction des points 1 et 2 (le point 3 au passage), puis refaire relire. On ne fusionne pas un rejet.
+---
 
+## Correction requise (priorité 4) — 2026-09-06
+
+Cette section **remplace la partie « Contrat » de la fiche pour `regions.py` / `cli.py` / `installer.py`** — périmètre inchangé (`src/momentum_ultra/regions.py`, `src/momentum_ultra/cli.py`, `src/momentum_ultra/installer.py`, `tests/test_regions.py`, `tests/test_cli.py`, cette fiche). On corrige sur la même branche, on ne recommence pas.
+
+### Défaut 1 — `argparse(choices=...)` intercepte `--region` avant tout message français (`cli.py:62-67`)
+
+`choices=valid_regions + [r.lower() for r in valid_regions]` sur l'argument `--region` fait échouer le *parsing* lui-même dès qu'une valeur invalide est fournie — quel que soit le sous-comportement demandé (`--detect`, `--install`, ou aucun). `argparse` écrit alors son propre message d'erreur, en anglais (`invalid choice: ...`), directement sur `stderr`, puis lève `SystemExit(2)` — que `main()` intercepte (`cli.py:104-106`) sans jamais pouvoir remplacer le texte déjà écrit. Le message français de `get_region_profile` (`regions.py:96-100`) n'est donc jamais atteint par ce chemin.
+
+Corriger :
+1. Retirer `choices=` de la définition de `--region` (`cli.py:62-67`) — la validation se fait désormais uniquement via `get_region_profile`.
+2. Juste après `args = parser.parse_args(argv)` dans `main()`, valider explicitement la région avant tout aiguillage :
+```python
+try:
+    get_region_profile(args.region)
+except ValueError as err:
+    print(f"Erreur : {err}", file=sys.stderr)
+    return 1
+```
+Cette validation précoce couvre tous les sous-comportements, `--region` étant un argument global. `_handle_install` et `_handle_export_bundle` continuent d'appeler `get_region_profile`/`get_default_pack` en aval : c'est une redondance sans effet de bord, à conserver (défense en profondeur), pas à supprimer.
+
+**Point observé, hors périmètre** : `--theme` (`cli.py:68-74`) souffre du même défaut de conception (`choices=` intercepte avant tout message français de `get_theme_profile`). Non corrigé ici, hors périmètre de cette fiche — à garder en tête si une fiche de correction est un jour écrite pour `theme.py`.
+
+### Défaut 2 — `/ext/settings/region.json` n'est jamais produit (`installer.py`, `manifest.py:198-208`)
+
+`generate_install_plan` (hors périmètre de cette fiche — appartient à `tache-04`) sérialise l'intégralité de `manifest.settings` dans un unique fichier `/ext/settings/momentum_profile.json`. Le fichier `region.json`, explicitement exigé par l'Objectif et par la section CLI/installer de cette fiche, n'existe nulle part. Corriger **sans toucher à `manifest.py`** (hors périmètre), en ajoutant l'action au niveau de `installer.py` et `cli.py` :
+
+Dans `installer.py`, étendre l'import existant de `momentum_ultra.regions` pour inclure `RegionProfile`, et l'import existant de `momentum_ultra.manifest` pour inclure `ActionType`. Ajouter :
+```python
+import json
+
+...
+
+
+def build_region_settings_action(profile: RegionProfile) -> PlanAction:
+    """Build the install-plan action that writes the region-specific settings file."""
+    content = json.dumps(export_region_config(profile), indent=2).encode()
+    return PlanAction(
+        action_type=ActionType.WRITE_FILE,
+        target_path="/ext/settings/region.json",
+        source_content=content,
+        description="Écriture du profil régional dans /ext/settings/region.json",
+    )
+```
+Dans `cli.py::_handle_install`, après `plan = generate_install_plan(pack, backup_existing=True)` :
+```python
+plan.append(build_region_settings_action(profile))
+```
+(`profile` est déjà calculé en tête de `_handle_install`, aucun calcul supplémentaire). Le dossier `/ext/settings` est déjà créé par `generate_install_plan` dès que `manifest.settings` est non vide (`manifest.py:198-199`) et précède cette action puisqu'elle est ajoutée en fin de plan — à confirmer par un test d'exécution, pas en le supposant.
+
+### Défaut 3 — avertissement légal WORLD non conforme au texte du contrat (`cli.py:252-256`)
+
+Remplacer par le texte exact exigé par la section CLI/installer de cette fiche :
+```python
+if profile.code == RegionCode.WORLD and not bundle_path:
+    print(
+        "\nAttention : Le profil WORLD déverrouille les restrictions fréquentielles. "
+        "L'utilisateur demeure légalement responsable des émissions radio selon sa "
+        "législation locale.\n"
+    )
+```
+
+### Critères d'acceptation (remplacent ceux de la fiche d'origine)
+
+- [x] `main(["--region", "INVALID"])`, sans aucun autre drapeau, affiche un message en français sur `stderr` et retourne `1` (pas de message anglais argparse, pas de code `2`)
+- [x] `main(["--install", "--region", "invalid", "--dry-run"])` confirme le même comportement via `_handle_install` (non-régression)
+- [x] `main(["--export-bundle", "x.tar.gz", "--region", "invalid"])` confirme le même comportement via `_handle_export_bundle` (non-régression)
+- [x] sur `--install --region US --dry-run` avec Flipper mocké, le plan d'installation exécuté contient une action `WRITE_FILE` ciblant exactement `/ext/settings/region.json`, dont le contenu JSON correspond à `export_region_config(get_region_profile("US"))`
+- [x] `/ext/settings/momentum_profile.json` continue d'être produit par ailleurs (non-régression — les deux fichiers coexistent)
+- [x] le texte affiché pour l'avertissement WORLD correspond mot pour mot à : « Attention : Le profil WORLD déverrouille les restrictions fréquentielles. L'utilisateur demeure légalement responsable des émissions radio selon sa législation locale. »
+- [x] `pytest` (suite complète) et `ruff check .` / `ruff format --check .` ne signalent rien
+- [x] aucun fichier hors périmètre touché

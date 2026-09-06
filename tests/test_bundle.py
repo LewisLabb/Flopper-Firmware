@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
+import io
 import json
+import tarfile
 from pathlib import Path
 
 import pytest
@@ -98,3 +101,147 @@ def test_import_bundle_invalid_tar(tmp_path: Path) -> None:
 
     with pytest.raises(BundleError, match="Erreur lors de la lecture"):
         import_bundle(corrupt_file)
+
+
+def test_export_bundle_contains_sha256(tmp_path: Path) -> None:
+    """Test that export_bundle includes sha256 checksums for apps and assets."""
+    manifest = PackManifest(
+        name="sha-pack",
+        version="1.0.0",
+        apps=[AppEntry(name="A", category="Tools", filename="a.fap", content=b"BIN_A")],
+        assets=[AssetEntry(destination_path="/ext/dolphin/a.bm", content=b"ASSET_A")],
+    )
+    bundle_path = export_bundle(manifest, tmp_path / "sha_pack.tar.gz")
+    with tarfile.open(bundle_path, "r:gz") as tar:
+        m_file = tar.extractfile("manifest.json")
+        assert m_file is not None
+        data = json.loads(m_file.read().decode())
+        assert data["apps"][0]["sha256"] == hashlib.sha256(b"BIN_A").hexdigest()
+        assert data["assets"][0]["sha256"] == hashlib.sha256(b"ASSET_A").hexdigest()
+
+
+def test_import_bundle_path_traversal_asset(tmp_path: Path) -> None:
+    """Test that forged bundle with asset traversal is rejected by import_bundle."""
+    tar_path = tmp_path / "evil_asset.tar.gz"
+    manifest_data = {
+        "name": "evil-pack",
+        "version": "1.0.0",
+        "apps": [],
+        "assets": [
+            {
+                "destination_path": "../../../../etc/cron.d/evil",
+                "bundle_path": "assets/evil",
+            }
+        ],
+    }
+    with tarfile.open(tar_path, "w:gz") as tar:
+        m_bytes = json.dumps(manifest_data).encode()
+        m_info = tarfile.TarInfo(name="manifest.json")
+        m_info.size = len(m_bytes)
+        tar.addfile(m_info, io.BytesIO(m_bytes))
+
+        e_bytes = b"echo evil"
+        e_info = tarfile.TarInfo(name="assets/evil")
+        e_info.size = len(e_bytes)
+        tar.addfile(e_info, io.BytesIO(e_bytes))
+
+    with pytest.raises(BundleError):
+        import_bundle(tar_path)
+
+
+def test_import_bundle_path_traversal_app(tmp_path: Path) -> None:
+    """Test that forged bundle with app category traversal is rejected by import_bundle."""
+    tar_path = tmp_path / "evil_app.tar.gz"
+    manifest_data = {
+        "name": "evil-pack",
+        "version": "1.0.0",
+        "apps": [
+            {
+                "name": "Evil",
+                "category": "../../../home/claude/.ssh",
+                "filename": "evil.fap",
+                "bundle_path": "apps/evil.fap",
+            }
+        ],
+        "assets": [],
+    }
+    with tarfile.open(tar_path, "w:gz") as tar:
+        m_bytes = json.dumps(manifest_data).encode()
+        m_info = tarfile.TarInfo(name="manifest.json")
+        m_info.size = len(m_bytes)
+        tar.addfile(m_info, io.BytesIO(m_bytes))
+
+        a_bytes = b"evil_fap"
+        a_info = tarfile.TarInfo(name="apps/evil.fap")
+        a_info.size = len(a_bytes)
+        tar.addfile(a_info, io.BytesIO(a_bytes))
+
+    with pytest.raises(BundleError):
+        import_bundle(tar_path)
+
+
+def test_import_bundle_tampered_content(tmp_path: Path) -> None:
+    """Test that bundle with altered content raises BundleError on SHA256 mismatch."""
+    manifest = PackManifest(
+        name="tamper-pack",
+        version="1.0.0",
+        apps=[
+            AppEntry(
+                name="Good", category="Tools", filename="good.fap", content=b"ORIGINAL"
+            )
+        ],
+    )
+    bundle_path = export_bundle(manifest, tmp_path / "original.tar.gz")
+
+    # Read original manifest.json to keep original sha256
+    with tarfile.open(bundle_path, "r:gz") as tar:
+        m_file = tar.extractfile("manifest.json")
+        assert m_file is not None
+        manifest_bytes = m_file.read()
+
+    # Create forged bundle with modified binary content but original manifest sha256
+    tampered_path = tmp_path / "tampered.tar.gz"
+    with tarfile.open(tampered_path, "w:gz") as tar:
+        m_info = tarfile.TarInfo(name="manifest.json")
+        m_info.size = len(manifest_bytes)
+        tar.addfile(m_info, io.BytesIO(manifest_bytes))
+
+        altered_bytes = b"ALTERED_BINARY"
+        a_info = tarfile.TarInfo(name="apps/Tools/good.fap")
+        a_info.size = len(altered_bytes)
+        tar.addfile(a_info, io.BytesIO(altered_bytes))
+
+    with pytest.raises(BundleError, match="Somme de contrôle invalide"):
+        import_bundle(tampered_path)
+
+
+def test_import_bundle_without_sha256(tmp_path: Path) -> None:
+    """Test that bundle without sha256 field still imports successfully (best-effort)."""
+    tar_path = tmp_path / "no_sha.tar.gz"
+    manifest_data = {
+        "name": "no-sha-pack",
+        "version": "1.0.0",
+        "apps": [
+            {
+                "name": "App",
+                "category": "Tools",
+                "filename": "app.fap",
+                "bundle_path": "apps/app.fap",
+            }
+        ],
+        "assets": [],
+    }
+    with tarfile.open(tar_path, "w:gz") as tar:
+        m_bytes = json.dumps(manifest_data).encode()
+        m_info = tarfile.TarInfo(name="manifest.json")
+        m_info.size = len(m_bytes)
+        tar.addfile(m_info, io.BytesIO(m_bytes))
+
+        a_bytes = b"app_bin"
+        a_info = tarfile.TarInfo(name="apps/app.fap")
+        a_info.size = len(a_bytes)
+        tar.addfile(a_info, io.BytesIO(a_bytes))
+
+    imported = import_bundle(tar_path)
+    assert imported.name == "no-sha-pack"
+    assert imported.apps[0].content == b"app_bin"

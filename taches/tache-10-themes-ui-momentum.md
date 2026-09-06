@@ -158,3 +158,77 @@ Leçon d'aiguillage : mal aiguillée. Le critère d'AGENTS.md — « un test
 ```
 
 **Suite à donner** : ne pas fusionner. Réécrire `get_theme_assets` contre le format réel des asset packs Momentum (`/ext/asset_packs/<Nom>/{Anims,Icons}/`, `.bm`/`.bmx`, `manifest.txt`), ou, si un pilotage par JSON custom est délibérément visé, l'écrire noir sur blanc dans le contrat comme une extension propre au projet plutôt que de laisser croire à une conformité Momentum inexistante.
+---
+
+## Correction requise (priorité 7) — 2026-09-06
+
+**Décision de portée (2026-09-06, tranchée par l'utilisateur)** : entre réécrire `get_theme_assets` contre le vrai format binaire des asset packs Momentum (`.bm`/`.bmx`, `manifest.txt` sous `/ext/asset_packs/<Nom>/`) et redescendre en extension custom honnêtement documentée, le choix retenu est **la seconde option**. Le mécanisme JSON actuel est conservé tel quel (il fonctionne, il est testé) ; ce qui change, c'est que le contrat, la documentation et l'aide en ligne cessent de laisser croire à une conformité Momentum native qui n'existe pas. Générer de vraies frames bitmap sans matériel pour valider le rendu aurait signifié deviner un format binaire non vérifiable dans ce contexte — le même écueil que celui qui a produit le défaut initial.
+
+Cette section **remplace la partie « Contrat » de la fiche pour `theme.py` uniquement** — périmètre inchangé (`src/momentum_ultra/theme.py`, `src/momentum_ultra/cli.py`, `tests/test_theme.py`, `tests/test_cli.py`, cette fiche). On corrige sur la même branche.
+
+### Note de portée à intégrer dans le code et la documentation
+
+Cette fonctionnalité configure un **profil de préférences propre à Momentum Ultra** (JSON interne + note texte), pas un véritable thème visuel Momentum. Installé seul, il ne change rien à l'affichage réel d'un Flipper sous Momentum : un vrai changement d'apparence nécessiterait le format natif des asset packs (`/ext/asset_packs/<Nom>/{Anims,Icons}/`, frames `.bm`/`.bmx`, `manifest.txt`), qui n'est pas implémenté ici et reste hors périmètre de cette correction.
+
+### Défaut 1 — `get_theme_assets` écrit sous `/ext/dolphin/`, un chemin qui laisse croire à une intégration native (`theme.py:111-130`)
+
+`/ext/dolphin/theme_info.txt` n'apparaît dans aucune documentation officielle des chemins SD Momentum ; l'utiliser suggère à tort une intégration avec le système d'animations dolphin réel. Déplacer ce fichier dans l'espace de configuration propre au projet, aux côtés de `momentum_ui.json` :
+```python
+def get_theme_assets(profile: ThemeProfile) -> list[AssetEntry]:
+    """Return this project's own preference-profile asset entries.
+
+    Ceci configure un profil de préférences interne à Momentum Ultra, PAS un
+    asset pack Momentum natif (pas de frames .bm/.bmx, pas de manifest.txt).
+    Sans effet sur l'affichage réel d'un Flipper sous Momentum tant que le
+    format natif des asset packs n'est pas implémenté séparément.
+    """
+    settings_data = export_theme_settings(profile)
+    manifest_bytes = json.dumps(settings_data, indent=2).encode("utf-8")
+    dolphin_info = (
+        f"Momentum Ultra — profil de préférences : {profile.title}\n"
+        f"Pack : {profile.animations_pack}\n"
+        f"Barre d'état : {profile.status_bar.value}\n"
+        "Ce fichier ne modifie pas l'affichage natif de Momentum : c'est une "
+        "extension de préférences propre à Momentum Ultra.\n"
+    ).encode()
+
+    return [
+        AssetEntry(
+            destination_path="/ext/settings/momentum_ui.json",
+            content=manifest_bytes,
+        ),
+        AssetEntry(
+            destination_path="/ext/settings/momentum_ui_info.txt",
+            content=dolphin_info,
+        ),
+    ]
+```
+Le contenu JSON de `/ext/settings/momentum_ui.json` (produit par `export_theme_settings`) ne change pas — seul le chemin et le contenu texte du second fichier changent.
+
+### Défaut 2 — l'aide CLI et la description du module surpromettent (`cli.py:69-74`, `theme.py:1`)
+
+Remplacer le texte d'aide de l'option `--theme` :
+```python
+parser.add_argument(
+    "--theme",
+    default="default",
+    choices=valid_themes + [t.lower() for t in valid_themes],
+    help=(
+        "Profil de préférences visuelles Momentum Ultra (extension propre à "
+        "ce projet : n'installe pas d'asset pack Momentum natif)."
+    ),
+)
+```
+Mettre à jour la docstring de module en tête de `theme.py` (`"""Momentum UI theme profiles and visual customization management."""`) pour ne plus affirmer une gestion de « thèmes visuels » sans nuance — par exemple : `"""Custom preference-profile management for Momentum Ultra (not native Momentum asset packs)."""`.
+
+**Point observé, hors périmètre** : le même défaut de conception `choices=` que sur `tache-06` (`--region`) existe aussi sur `--theme` (`cli.py:68-74`) — une valeur invalide produit un message d'erreur anglais d'argparse plutôt que le message français de `get_theme_profile`. Non corrigé ici, cette fiche ne portant que sur le format d'assets ; à traiter si une fiche dédiée à ce point est un jour ouverte.
+
+### Critères d'acceptation (remplacent ceux de la fiche d'origine)
+
+- [x] `get_theme_assets` ne produit plus aucun fichier sous `/ext/dolphin/` — ses deux `AssetEntry` ciblent toutes deux `/ext/settings/`
+- [x] le contenu JSON de `/ext/settings/momentum_ui.json` reste identique à avant (non-régression, `export_theme_settings` inchangée)
+- [x] la docstring de `get_theme_assets` indique explicitement qu'il ne s'agit pas d'un asset pack Momentum natif
+- [x] le texte d'aide de `--theme` (visible via `main(["--help"])`) ne contient plus la formulation « Thème visuel Momentum » sans qualification
+- [x] aucune tentative d'écriture de frame binaire (`.bm`/`.bmx`) n'est ajoutée — hors périmètre de cette correction, décision de portée du 2026-09-06
+- [x] `pytest` (suite complète, `tests/test_theme.py` mis à jour pour le nouveau chemin `/ext/settings/momentum_ui_info.txt`) et `ruff check .` / `ruff format --check .` ne signalent rien
+- [x] aucun fichier hors périmètre touché

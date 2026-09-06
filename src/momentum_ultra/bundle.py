@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import tarfile
 from pathlib import Path
 
 from momentum_ultra.manifest import (
-    AppEntry,
-    AssetEntry,
     PackManifest,
     load_manifest_from_dict,
 )
@@ -48,6 +47,7 @@ def export_bundle(manifest: PackManifest, destination: str | Path) -> Path:
                 "category": app.category,
                 "filename": app.filename,
                 "bundle_path": app_arc_path,
+                "sha256": hashlib.sha256(app_data).hexdigest(),
             }
             manifest_dict["apps"].append(app_meta)  # type: ignore[union-attr]
 
@@ -63,6 +63,7 @@ def export_bundle(manifest: PackManifest, destination: str | Path) -> Path:
             asset_meta = {
                 "destination_path": asset.destination_path,
                 "bundle_path": asset_arc_path,
+                "sha256": hashlib.sha256(asset_data).hexdigest(),
             }
             manifest_dict["assets"].append(asset_meta)  # type: ignore[union-attr]
 
@@ -77,7 +78,7 @@ def export_bundle(manifest: PackManifest, destination: str | Path) -> Path:
 
 
 def import_bundle(bundle_path: str | Path) -> PackManifest:
-    """Load, validate and unpack a PackManifest from a bundle archive."""
+    """Load, validate and unpack a PackManifest from a bundle archive (with best-effort SHA256 check)."""
     path = Path(bundle_path)
     if not path.exists():
         raise BundleError(f"Le fichier bundle '{bundle_path}' n'existe pas.")
@@ -108,7 +109,6 @@ def import_bundle(bundle_path: str | Path) -> PackManifest:
 
             data = json.loads(m_file.read().decode("utf-8"))
 
-            apps: list[AppEntry] = []
             for app_meta in data.get("apps", []):
                 arc_path = app_meta.get("bundle_path")
                 content = b""
@@ -119,16 +119,14 @@ def import_bundle(bundle_path: str | Path) -> PackManifest:
                             content = f.read()
                     except KeyError:
                         pass
-                apps.append(
-                    AppEntry(
-                        name=app_meta["name"],
-                        category=app_meta["category"],
-                        filename=app_meta["filename"],
-                        content=content,
+                expected = app_meta.get("sha256")
+                if expected and hashlib.sha256(content).hexdigest() != expected:
+                    raise BundleError(
+                        f"Somme de contrôle invalide pour '{arc_path}' dans le bundle "
+                        f"'{bundle_path}' (fichier corrompu ou altéré)."
                     )
-                )
+                app_meta["content"] = content
 
-            assets: list[AssetEntry] = []
             for asset_meta in data.get("assets", []):
                 arc_path = asset_meta.get("bundle_path")
                 content = b""
@@ -139,21 +137,15 @@ def import_bundle(bundle_path: str | Path) -> PackManifest:
                             content = f.read()
                     except KeyError:
                         pass
-                assets.append(
-                    AssetEntry(
-                        destination_path=asset_meta["destination_path"],
-                        content=content,
+                expected = asset_meta.get("sha256")
+                if expected and hashlib.sha256(content).hexdigest() != expected:
+                    raise BundleError(
+                        f"Somme de contrôle invalide pour '{arc_path}' dans le bundle "
+                        f"'{bundle_path}' (fichier corrompu ou altéré)."
                     )
-                )
+                asset_meta["content"] = content
 
-            return PackManifest(
-                name=data["name"],
-                version=data["version"],
-                description=data.get("description", ""),
-                apps=apps,
-                assets=assets,
-                settings=data.get("settings", {}),
-            )
+            return load_manifest_from_dict(data)
     except Exception as exc:
         if isinstance(exc, BundleError):
             raise

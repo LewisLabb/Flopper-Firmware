@@ -149,3 +149,115 @@ Leçon d'aiguillage : mal aiguillée pour sa partie protocole. Les profils de
 ```
 
 **Suite à donner** : ne pas fusionner. Le protocole de diagnostic doit être conçu à partir d'un mécanisme que le CLI Flipper expose réellement (ou déclaré non réalisable en l'état), pas inventé puis validé par son propre mock.
+---
+
+## Correction requise (priorité 6) — 2026-09-06
+
+Cette section **remplace la partie « Contrat » de la fiche pour `modules.py` / `cli.py` / `installer.py`** — périmètre inchangé (`src/momentum_ultra/modules.py`, `src/momentum_ultra/cli.py`, `src/momentum_ultra/installer.py`, `tests/test_modules.py`, `tests/test_cli.py`, cette fiche). On corrige sur la même branche.
+
+### Ce qui a été vérifié, et comment
+
+Documentation officielle Flipper (`docs.flipper.net/development/cli`), corroborée par une capture réelle du menu d'aide série d'un Flipper Zero physique, et par le code source du firmware (`flipperdevices/flipperzero-firmware`, branche `dev`, et son fork `Next-Flip/Momentum-Firmware`, même branche, `applications/main/gpio/gpio_app.c` + `gpio_app_i.h`) :
+- La commande CLI `gpio` n'expose que trois sous-commandes, sur **une broche nommée à la fois** : `gpio mode <broche> <0|1>`, `gpio set <broche> <0|1>`, `gpio read <broche>`. Aucune sous-commande `status`, aucune réponse du type `"cc1101 detected"` nulle part dans le firmware.
+- Aucune commande série, dans le firmware officiel ni dans Momentum, ne permet d'identifier automatiquement quel module externe (CC1101, nRF24, ESP32...) est branché sur le connecteur GPIO. Le seul mécanisme d'auto-détection existant dans tout le firmware est le protocole d'« expansion module » officiel (carte WiFi dev board) — une poignée de main UART différente, non exposée au CLI série — et le scanner I2C ajouté par Momentum, GUI-only, qui ne voit ni le CC1101 ni le nRF24 (composants SPI).
+
+**Conclusion** : l'auto-détection promise par le Pilier 5 du brief et par cette fiche n'est **pas réalisable** via le CLI série du Flipper, quelle que soit la qualité de l'implémentation — ce n'est pas un défaut de code, c'est une contrainte matérielle/firmware. `detect_connected_modules()` ne peut pas être « corrigée » : n'importe quelle chaîne qu'elle chercherait à reconnaître serait, comme aujourd'hui, une invention testée uniquement contre son propre mock.
+
+### Changement de contrat : sélection manuelle déclarée, au lieu d'une auto-détection impossible
+
+1. **Supprimer** `detect_connected_modules()` de `modules.py` — plus aucune commande GPIO n'est envoyée au Flipper pour « détecter » quoi que ce soit.
+2. **`--diagnose-modules` devient un affichage informatif hors-ligne**, sans connexion au Flipper requise : il liste les modules pris en charge et leur brochage, pour que l'utilisateur compare lui-même à son câblage physique.
+   ```python
+   def _handle_diagnose_modules() -> int:
+       """List supported external modules and their pinout for manual verification."""
+       configs = get_default_module_configs()
+       print(
+           "\n--- Modules externes pris en charge (vérification manuelle du câblage) ---"
+       )
+       print(
+           "Le CLI série du Flipper Zero ne permet pas de détecter automatiquement\n"
+           "quel module est branché sur le connecteur GPIO (seules les commandes\n"
+           "gpio mode/set/read existent, sur une broche à la fois). Comparez votre\n"
+           "câblage à la liste ci-dessous, puis déclarez vos modules avec --modules\n"
+           "lors de --install.\n"
+       )
+       for cfg in configs.values():
+           print(f"  • {cfg.name} ({cfg.module_type.value}) : {cfg.description}")
+       return 0
+   ```
+   (le détail des broches peut être ajouté à l'affichage si utile ; l'important est qu'aucune commande série ne soit envoyée et qu'aucun Flipper ne soit requis pour cette commande).
+3. **Nouvelle option `--modules LISTE`** (chaîne séparée par des virgules, ex. `cc1101,nrf24`), déclarative, utilisée par `--install` :
+   ```python
+   parser.add_argument(
+       "--modules",
+       metavar="LISTE",
+       default="",
+       help=(
+           "Modules externes réellement connectés, séparés par des virgules "
+           "(cc1101, nrf24, esp32, combo_2in1). Vide par défaut : aucun module "
+           "n'est supposé connecté."
+       ),
+   )
+   ```
+   avec une fonction de parsing dans `cli.py` :
+   ```python
+   def _parse_modules_arg(raw: str) -> list[ModuleType]:
+       """Parse the --modules comma-separated list into ModuleType values."""
+       result: list[ModuleType] = []
+       for token in raw.split(","):
+           token = token.strip().lower()
+           if not token:
+               continue
+           try:
+               result.append(ModuleType(token))
+           except ValueError as exc:
+               valid = ", ".join(m.value for m in ModuleType)
+               raise ValueError(
+                   f"Module inconnu '{token}'. Modules valides : {valid}."
+               ) from exc
+       return result
+   ```
+   Dans `_handle_install`, avant la construction du pack :
+   ```python
+   try:
+       modules_list = _parse_modules_arg(args.modules)
+   except ValueError as err:
+       print(f"Erreur : {err}", file=sys.stderr)
+       return 1
+   ```
+   puis passer `modules=modules_list` à `get_default_pack(...)`.
+4. **`installer.py::get_default_pack`** : remplacer le défaut actuel (`[CC1101, NRF24, ESP32_MARAUDER]` — qui suppose à tort que ces trois modules sont *toujours* présents) par une liste vide :
+   ```python
+   modules_list = modules if modules is not None else []
+   ```
+   Ce défaut vide est le choix conservateur cohérent avec le reste du projet (région EU par défaut, `dry_run=True` par défaut) : on ne suppose jamais de matériel non déclaré.
+5. **`/ext/settings/modules.json` n'est jamais produit séparément**, malgré la promesse de l'Objectif et du docstring d'`export_modules_settings` — même défaut d'architecture que `region.json` sur `tache-06`. Corriger de la même façon, sans toucher `manifest.py` (hors périmètre) : ajouter dans `installer.py`
+   ```python
+   def build_modules_settings_action(active_modules: list[ModuleType]) -> PlanAction:
+       """Build the install-plan action that writes the modules settings file."""
+       content = json.dumps(export_modules_settings(active_modules), indent=2).encode()
+       return PlanAction(
+           action_type=ActionType.WRITE_FILE,
+           target_path="/ext/settings/modules.json",
+           source_content=content,
+           description="Écriture de la configuration des modules dans /ext/settings/modules.json",
+       )
+   ```
+   et dans `cli.py::_handle_install`, après l'ajout de l'action région (`tache-06`) :
+   ```python
+   plan.append(build_modules_settings_action(modules_list))
+   ```
+
+### Critères d'acceptation (remplacent ceux de la fiche d'origine)
+
+- [x] `modules.py` ne contient plus `detect_connected_modules` ni aucune fonction envoyant une commande GPIO au Flipper
+- [x] `main(["--diagnose-modules"])` fonctionne **sans aucun Flipper connecté** (ni mock de connexion), affiche la liste des modules pris en charge, et retourne `0`
+- [x] `main(["--install", "--modules", "cc1101,nrf24", "--dry-run"])` sur un Flipper mocké produit un plan dont l'action `/ext/settings/modules.json` contient exactement les deux modules déclarés
+- [x] `main(["--install", "--dry-run"])` (sans `--modules`) sur un Flipper mocké produit `/ext/settings/modules.json` avec une liste de modules vide (`"enabled": false, "active_modules": []`) — non-régression du principe « conservateur par défaut »
+- [x] `main(["--install", "--modules", "inconnu", "--dry-run"])` affiche une erreur claire en français et retourne `1`
+- [x] `pytest` (suite complète) et `ruff check .` / `ruff format --check .` ne signalent rien
+- [x] aucun fichier hors périmètre touché
+
+### Condition d'arrêt supplémentaire
+
+Si cette révision de contrat (auto-détection → sélection déclarative) est jugée insuffisante par rapport à l'ambition du Pilier 5 du brief, ne pas la fusionner en silence : remonter la question. Une vraie auto-détection matérielle nécessiterait soit un firmware Momentum modifié exposant une commande CLI dédiée (hors périmètre de ce projet, qui ne flashe jamais de firmware), soit un protocole de sonde SPI/I2C bas niveau non exposé aujourd'hui par le CLI série.

@@ -71,11 +71,12 @@ def test_get_theme_assets() -> None:
     settings_asset = next(
         a for a in assets if a.destination_path == "/ext/settings/momentum_ui.json"
     )
-    dolphin_asset = next(
-        a for a in assets if a.destination_path == "/ext/dolphin/theme_info.txt"
+    info_asset = next(
+        a for a in assets if a.destination_path == "/ext/settings/momentum_ui_info.txt"
     )
 
     assert isinstance(settings_asset, AssetEntry)
     data = json.loads(settings_asset.content.decode("utf-8"))
     assert data["theme_name"] == "dark_stealth"
-    assert b"Dark Stealth" in dolphin_asset.content
+    assert b"Dark Stealth" in info_asset.content
+    assert not any(a.destination_path.startswith("/ext/dolphin/") for a in assets)
