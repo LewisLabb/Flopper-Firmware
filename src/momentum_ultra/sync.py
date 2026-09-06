@@ -83,16 +83,16 @@ def sync_captures_to_local(
 
         # Download or simulate download
         if not client.dry_run:
-            output = client.send_cmd(f"storage read {item.remote_path}")
-            local_file.write_bytes(output.encode("utf-8", errors="replace"))
+            data = client.read_file(item.remote_path)
+            local_file.write_bytes(data)
+            total_bytes += len(data)
         else:
             # In simulation, write a placeholder header
             local_file.write_text(
                 f"# [SIMULATION] Captured file from Flipper: {item.remote_path}\n",
                 encoding="utf-8",
             )
-
-        total_bytes += item.size
+            total_bytes += item.size
 
     report = SyncReport(
         synced_items=items,

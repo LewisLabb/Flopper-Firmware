@@ -155,6 +155,23 @@ class FlipperClient:
         """Read incoming serial bytes until the prompt marker is reached."""
         return self._read_until(PROMPT)
 
+    def _read_exact(self, n: int) -> bytes:
+        """Read exactly n raw bytes from the serial connection (binary-safe)."""
+        buffer = bytearray()
+        start_time = time.time()
+        while len(buffer) < n:
+            chunk = self._read_bytes(n - len(buffer))
+            if chunk:
+                buffer.extend(chunk)
+                start_time = time.time()
+            elif (time.time() - start_time) > self.timeout:
+                raise FlipperTimeoutError(
+                    "Délai d'attente dépassé lors de la lecture du fichier."
+                )
+            else:
+                time.sleep(0.005)
+        return bytes(buffer)
+
     def send_cmd(self, command: str) -> str:
         """Send a raw text command to Flipper and wait for the response prompt."""
         words = command.strip().split()
@@ -236,6 +253,32 @@ class FlipperClient:
         self._write_bytes(CLI_ETX)
         self._read_until_prompt()
         return True
+
+    def read_file(self, path: str) -> bytes:
+        """Read a file from the SD card as raw bytes (never decoded as text)."""
+        if self.dry_run:
+            return b""
+
+        self._write_bytes(f"storage read {path}\r\n".encode())
+        header = self._read_until(b"\n").strip()
+        if "Storage error" in header or "error:" in header.lower():
+            self._read_until_prompt()
+            raise FlipperCommandError(
+                f"Impossible de lire le fichier {path} : {header}"
+            )
+
+        size_token = (
+            header[len("Size:") :].strip() if header.startswith("Size:") else ""
+        )
+        if not size_token.isdigit():
+            self._read_until_prompt()
+            raise FlipperCommandError(
+                f"En-tête de taille inattendu pour {path} : {header!r}"
+            )
+
+        data = self._read_exact(int(size_token))
+        self._read_until_prompt()
+        return data
 
     def backup_item(
         self,

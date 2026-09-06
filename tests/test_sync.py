@@ -73,7 +73,7 @@ def test_sync_captures_to_local_dry_run(tmp_path: Path) -> None:
 
 
 def test_sync_captures_to_local_real_mode(tmp_path: Path) -> None:
-    """Test syncing captures in real download mode."""
+    """Test that real-mode download preserves capture bytes exactly (binary-safe)."""
     client = MagicMock(spec=FlipperClient)
     client.dry_run = False
 
@@ -82,7 +82,10 @@ def test_sync_captures_to_local_real_mode(tmp_path: Path) -> None:
         if path == "/ext/nfc"
         else []
     )
-    client.send_cmd.return_value = "File content NFC card payload"
+    # Raw capture bytes that are NOT valid UTF-8 — the old text round-trip
+    # would have replaced these with U+FFFD and corrupted the backup.
+    raw = b"\x00\x01\x89PNG\r\n\xff\xfe\x10Flipper\x00"
+    client.read_file.return_value = raw
 
     dest_dir = tmp_path / "captures_real"
     report = sync_captures_to_local(client=client, destination_dir=dest_dir)
@@ -90,8 +93,9 @@ def test_sync_captures_to_local_real_mode(tmp_path: Path) -> None:
     assert len(report.synced_items) == 1
     local_file = dest_dir / "nfc" / "card.nfc"
     assert local_file.exists()
-    assert "File content NFC" in local_file.read_text(encoding="utf-8")
-    client.send_cmd.assert_called_once_with("storage read /ext/nfc/card.nfc")
+    assert local_file.read_bytes() == raw  # byte-for-byte fidelity
+    assert report.total_bytes == len(raw)  # counts bytes actually written
+    client.read_file.assert_called_once_with("/ext/nfc/card.nfc")
 
 
 def test_export_captures_catalog(tmp_path: Path) -> None:

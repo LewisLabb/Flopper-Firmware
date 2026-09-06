@@ -202,6 +202,52 @@ def test_write_file_real_mode_error() -> None:
     assert CLI_ETX not in mock_serial.written
 
 
+def test_read_file_dry_run_returns_empty() -> None:
+    """read_file is a no-op returning empty bytes in dry_run (no command sent)."""
+    mock_serial = MockSerialStream([b"\r\n>: "])
+    with (
+        patch("serial.Serial", return_value=mock_serial),
+        FlipperClient(port="COM3", dry_run=True) as client,
+    ):
+        assert client.read_file("/ext/nfc/card.nfc") == b""
+        assert len(mock_serial.written) == 1  # only the initial sync
+
+
+def test_read_file_binary_fidelity() -> None:
+    """read_file returns the exact bytes, even non-UTF-8 ones embedding the prompt."""
+    raw = b"\x00\x01" + b">: " + b"\xff\xfe\x89\x00"  # embeds the prompt marker
+    mock_serial = MockSerialStream(
+        [
+            b"\r\n>: ",  # initial sync
+            f"Size: {len(raw)}\r\n".encode(),  # size header
+            raw,  # exactly len(raw) raw bytes
+            b">: ",  # final prompt
+        ]
+    )
+    with (
+        patch("serial.Serial", return_value=mock_serial),
+        FlipperClient(port="COM3", dry_run=False) as client,
+    ):
+        assert client.read_file("/ext/nfc/card.nfc") == raw
+        assert mock_serial.written[1] == b"storage read /ext/nfc/card.nfc\r\n"
+
+
+def test_read_file_storage_error() -> None:
+    """read_file raises FlipperCommandError when the firmware reports an error."""
+    mock_serial = MockSerialStream(
+        [
+            b"\r\n>: ",
+            b"Storage error: file not found\r\n>: ",
+        ]
+    )
+    with (
+        patch("serial.Serial", return_value=mock_serial),
+        FlipperClient(port="COM3", dry_run=False) as client,
+        pytest.raises(FlipperCommandError, match="file not found"),
+    ):
+        client.read_file("/ext/nfc/missing.nfc")
+
+
 def test_mkdir_dry_run() -> None:
     """Test mkdir does not write when dry_run=True."""
     mock_serial = MockSerialStream([b"\r\n>: "])
