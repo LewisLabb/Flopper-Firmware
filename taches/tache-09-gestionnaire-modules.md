@@ -122,7 +122,7 @@ def export_modules_settings(active_modules: list[ModuleType]) -> dict[str, Any]:
 
 Exécutée dans un contexte séparé, sans droit d'écriture. Périmètre vérifié sur l'arbre, non sur un diff (git indisponible) — conforme.
 
-```
+```	ext
 Verdict : rejeté
 Motif :
   modules.py:101-125 + cli.py:204-206 — le diagnostic envoie la commande série
@@ -149,4 +149,3 @@ Leçon d'aiguillage : mal aiguillée pour sa partie protocole. Les profils de
 ```
 
 **Suite à donner** : ne pas fusionner. Le protocole de diagnostic doit être conçu à partir d'un mécanisme que le CLI Flipper expose réellement (ou déclaré non réalisable en l'état), pas inventé puis validé par son propre mock.
-

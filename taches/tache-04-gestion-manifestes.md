@@ -142,7 +142,7 @@ Règles de comportement :
 
 Exécutée dans un contexte séparé, sans droit d'écriture. Périmètre vérifié sur l'arbre, non sur un diff (git indisponible) — conforme.
 
-```
+```	ext
 Verdict : rejeté
 Motif :
   manifest.py:111-115 — load_manifest_from_dict n'impose AUCUNE contrainte de
@@ -183,6 +183,7 @@ Deux natures de champs, deux validations différentes :
 ### Défaut 1 — `category`/`filename` non validés comme segments (`manifest.py:84-90`)
 
 Aujourd'hui, seule la véracité est testée (`not app_name or not category or not filename`, `:87`), puis conversion silencieuse via `str(category)` (`:97`) — un `category` de type `dict` devient un segment de chemin absurde plutôt que de lever une erreur. Ajouter une fonction privée, par exemple `_validate_path_segment(value: object, field_name: str) -> str`, qui :
+
 1. lève `ValueError` si `value` n'est pas une chaîne non vide (pas de coercition silencieuse via `str()`) ;
 2. lève `ValueError` si `value` contient `/` ou `\`, ou vaut exactement `.` ou `..`.
 
@@ -223,5 +224,3 @@ Si `content` n'est ni `str` ni déjà `bytes` (un entier, par exemple), il est a
 - [ ] un manifeste valide, avec des chemins conformes sous `/ext/`, continue de produire un plan d'installation identique à avant (non-régression — rejouer les cas nominaux existants de `test_manifest.py`)
 - [ ] `pytest` (suite complète) et `ruff check .` / `ruff format --check .` ne signalent rien
 - [ ] aucun fichier hors périmètre touché
-
-

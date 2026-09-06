@@ -109,7 +109,7 @@ def export_dictionary_assets(dictionary: PredictiveDictionary) -> list[AssetEntr
 
 Exécutée dans un contexte séparé, sans droit d'écriture. Périmètre vérifié sur l'arbre, non sur un diff (git indisponible) — conforme.
 
-```
+```	ext
 Verdict : accepté
 Motif : contrat respecté à la lettre. 80/80 tests (suite complète, exécutés
   réellement), ruff propre. Vérification ciblée de la classe de défaut
@@ -133,4 +133,3 @@ Leçon d'aiguillage : bon aiguillage. Tâche mécanique (listes statiques,
 ```
 
 **Suite à donner** : acceptable en fusion.
-

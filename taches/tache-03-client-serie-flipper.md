@@ -142,7 +142,7 @@ Règles de comportement :
 
 Exécutée dans un contexte séparé, sans droit d'écriture. Périmètre vérifié sur l'arbre, non sur un diff (git indisponible).
 
-```
+```	ext
 Verdict : rejeté
 Motif :
   1. flipper_client.py:148,151,155 — list_dir analyse un format ("[DIR]"/
@@ -193,16 +193,16 @@ Les tâches 05 (pipeline d'installation), 09 (gestionnaire de modules — pour s
 ### Ce qui a été vérifié, et comment
 
 Toutes les valeurs ci-dessous viennent directement du code source du firmware, pas d'une supposition ni d'un mock :
-`applications/services/storage/storage_cli.c`, branche `dev` — https://github.com/flipperdevices/flipperzero-firmware/blob/dev/applications/services/storage/storage_cli.c
+`applications/services/storage/storage_cli.c`, branche `dev` — <https://github.com/flipperdevices/flipperzero-firmware/blob/dev/applications/services/storage/storage_cli.c>
 
 - Listage d'un dossier (`storage list <path>`) — une ligne par entrée :
-  - dossier : `"	[D] %s
-"` — exemple réel : `"	[D] apps
+  - dossier : `"\t[D] %s
+"` — exemple réel : `"\t[D] apps
 "`
-  - fichier : `"	[F] %s %lub
-"` — exemple réel : `"	[F] key.sub 1024b
+  - fichier : `"\t[F] %s %lub
+"` — exemple réel : `"\t[F] key.sub 1024b
 "` (suffixe **`b` minuscule**, pas `B`)
-  - dossier vide : `"	Empty
+  - dossier vide : `"\tEmpty
 "` — **aucune ligne `[D]`/`[F]`**, un marqueur littéral à ignorer, pas une entrée malformée
   - erreur (dossier introuvable, échec d'ouverture) : `"Storage error: %s
 "`

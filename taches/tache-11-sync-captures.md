@@ -122,7 +122,7 @@ def export_captures_catalog(report: SyncReport, destination_dir: str | Path) -> 
 
 Exécutée dans un contexte séparé, sans droit d'écriture. Périmètre vérifié sur l'arbre, non sur un diff (git indisponible) — conforme (295 lignes < 300).
 
-```
+```	ext
 Verdict : rejeté
 Motif :
   1. tests/test_cli.py:275,284 — le seul test de bout en bout de
@@ -160,11 +160,11 @@ Ajoutée après la revue indépendante ci-dessus. « On corrige sur la même bra
 
 `sync.py:86-87` : en mode réel, `sync_captures_to_local` fait `output = client.send_cmd("storage read ...")` puis `local_file.write_bytes(output.encode("utf-8", errors="replace"))`. Les captures (`.sub`, `.nfc`, `.rfid`, `.ir`, `.ibtn`, `.badusb`) sont binaires : ce passage par du texte remplace tout octet non-UTF-8 par U+FFFD et ne retire pas l'en-tête `Size: N` du firmware. La sauvegarde produit des fichiers corrompus. Aucun test ne le rattrape (les mocks renvoient du texte propre) : le défaut reste invisible tant qu'on ne lit pas de vrais octets.
 
-### Agent assigné
+### Agent assigné pour la correction
 
 **Opus (Claude Code).** Lecture d'un flux binaire sur l'appareil, dépendante du format de trame `storage read` : c'est du protocole matériel, la classe même d'erreur que le mock rend indétectable (le mock devient la spécification). `AGENTS.md` attribue « toute écriture sur l'appareil, gestion d'erreurs matérielles » à Opus ; la lecture binaire fidèle relève du même jugement.
 
-### Périmètre
+### Périmètre de la correction
 
 Fichiers à créer ou modifier, et eux seuls :
 
@@ -176,7 +176,7 @@ tests/test_sync.py
 taches/tache-11-sync-captures.md
 ```
 
-### Contrat
+### Contrat de la correction
 
 Ajouter à `FlipperClient` une lecture binaire fidèle, distincte de `send_cmd` :
 
@@ -201,7 +201,7 @@ Séquence réelle de `storage read <path>` (firmware Flipper) : le firmware rép
 - [ ] L'en-tête `Size: N` n'apparaît jamais dans le fichier sauvegardé.
 - [ ] Garde-fou SD intact : aucune commande autre que `storage list`/`storage read` émise ; aucune écriture ni suppression sur la carte.
 
-### Conditions d'arrêt
+### Conditions d'arrêt de la correction
 
 - La séquence réelle de `storage read` diffère de celle décrite → s'arrêter et demander, ne pas re-deviner un format.
 - Une lecture binaire fiable exigerait de modifier le contrat public de `send_cmd` → s'arrêter et demander.

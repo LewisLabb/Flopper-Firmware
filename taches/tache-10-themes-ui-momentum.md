@@ -126,7 +126,7 @@ def get_theme_assets(profile: ThemeProfile) -> list[AssetEntry]:
 
 Exécutée dans un contexte séparé, sans droit d'écriture, avec vérification en ligne du format réel des asset packs Momentum (wiki officiel Next-Flip/Momentum-Firmware).
 
-```
+```	ext
 Verdict : rejeté
 Motif :
   theme.py:111-130 (get_theme_assets) écrit /ext/settings/momentum_ui.json et
@@ -158,4 +158,3 @@ Leçon d'aiguillage : mal aiguillée. Le critère d'AGENTS.md — « un test
 ```
 
 **Suite à donner** : ne pas fusionner. Réécrire `get_theme_assets` contre le format réel des asset packs Momentum (`/ext/asset_packs/<Nom>/{Anims,Icons}/`, `.bm`/`.bmx`, `manifest.txt`), ou, si un pilotage par JSON custom est délibérément visé, l'écrire noir sur blanc dans le contrat comme une extension propre au projet plutôt que de laisser croire à une conformité Momentum inexistante.
-

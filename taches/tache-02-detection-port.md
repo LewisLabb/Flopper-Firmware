@@ -134,7 +134,7 @@ Comportement attendu :
 
 Exécutée dans un contexte séparé, sans droit d'écriture (venv 3.11, `pip install -e ".[dev]"`, `pytest`, `ruff`). Périmètre vérifié sur l'arbre, non sur un diff (git indisponible).
 
-```
+```text
 Verdict : rejeté
 Motif :
   1. device.py:65 — le garde-fou d'exclusivité d'AGENTS.md (« un seul outil à la
@@ -172,6 +172,7 @@ Cette section **remplace la partie « Contrat » de la fiche pour `device.py` un
 ### Ce qui a été vérifié, et comment
 
 Documentation officielle pySerial (`pyserial.readthedocs.io/en/latest/pyserial_api.html`), paramètre `exclusive` de `serial.Serial` :
+
 - « A port cannot be opened in exclusive access mode if it is already open in exclusive access mode. »
 - « Set exclusive access mode (**POSIX only**). »
 - Ajouté en pySerial 3.3 ; sur Windows le paramètre est ignoré silencieusement (Windows verrouille déjà par défaut via `CreateFile` sans partage — c'est pour ça que le bug ne se voyait pas en développement sur une machine Windows).
@@ -179,14 +180,17 @@ Documentation officielle pySerial (`pyserial.readthedocs.io/en/latest/pyserial_a
 ### Défaut 1 — `is_port_available` (`device.py:62-69`) : verrou inopérant hors Windows
 
 `serial.Serial(port=port, timeout=1.0)` (`:65`) n'active aucun verrou sur Linux/macOS. Corriger en ajoutant `exclusive=True` :
+
 ```python
 ser = serial.Serial(port=port, timeout=1.0, exclusive=True)
 ```
+
 Sans effet sur Windows (paramètre ignoré, déjà exclusif par nature), correctif sur POSIX (lève `SerialException`, déjà interceptée par le `except` existant à la ligne 68).
 
 ### Défaut 2 — `find_flipper` (`device.py:39-59`) : exception d'énumération non gérée
 
 `serial.tools.list_ports.comports()` (`:41`) est appelé hors de tout `try`. Une panne d'énumération USB (accès registre sur Windows, lecture `sysfs` sur Linux) remonte aujourd'hui brute hors de `main()`. Corriger en :
+
 1. Ajoutant une nouvelle exception `FlipperEnumerationError(FlipperDeviceError)` dans `device.py`, aux côtés des trois existantes.
 2. Enveloppant l'appel à `comports()` dans un `try` qui intercepte `(serial.SerialException, OSError)` et relève `FlipperEnumerationError` avec un message en français (« Impossible d'énumérer les ports série : {exc} »).
 3. **Aucun changement requis dans `cli.py`** : `_get_connected_device` (`cli.py:138-153`) intercepte déjà `except FlipperDeviceError`, et `FlipperEnumerationError` en hérite — la nouvelle exception sera donc correctement affichée en français sans toucher à `cli.py`. Vérifier ce point en exécution, pas en le supposant.
@@ -203,5 +207,3 @@ Sans effet sur Windows (paramètre ignoré, déjà exclusif par nature), correct
 - [ ] `main(["--detect"])` sur ce même mock affiche le message français sur `stderr` et retourne `1` — vérifié en appelant `main()`, pas seulement `find_flipper()` en isolation, pour confirmer que `cli.py` n'a pas besoin d'être modifié
 - [ ] `pytest` (suite complète) et `ruff check .` / `ruff format --check .` ne signalent rien
 - [ ] aucun fichier hors périmètre touché
-
-

