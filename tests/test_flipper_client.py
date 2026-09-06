@@ -7,7 +7,7 @@ from unittest.mock import patch
 import pytest
 import serial
 
-from momentum_ultra.flipper_client import (
+from flopper.flipper_client import (
     CLI_ETX,
     DEFAULT_BACKUP_DIR,
     FlipperClient,

@@ -1,11 +1,11 @@
-"""Custom preference-profile management for Momentum Ultra (not native Momentum asset packs)."""
+"""Custom preference-profile management for Flopper (not native Momentum asset packs)."""
 
 import json
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
-from momentum_ultra.manifest import AssetEntry
+from flopper.manifest import AssetEntry
 
 
 class ThemeName(str, Enum):
@@ -111,19 +111,19 @@ def export_theme_settings(profile: ThemeProfile) -> dict[str, Any]:
 def get_theme_assets(profile: ThemeProfile) -> list[AssetEntry]:
     """Return this project's own preference-profile asset entries.
 
-    Ceci configure un profil de préférences interne à Momentum Ultra, PAS un
+    Ceci configure un profil de préférences interne à Flopper, PAS un
     asset pack Momentum natif (pas de frames .bm/.bmx, pas de manifest.txt).
-    Sans effet sur l'affichage réel d'un Flipper sous Momentum tant que le
+    Sans effet sur l'affichage réel d'un Flipper sous le firmware standard tant que le
     format natif des asset packs n'est pas implémenté séparément.
     """
     settings_data = export_theme_settings(profile)
     manifest_bytes = json.dumps(settings_data, indent=2).encode("utf-8")
     dolphin_info = (
-        f"Momentum Ultra — profil de préférences : {profile.title}\n"
+        f"Flopper — profil de préférences : {profile.title}\n"
         f"Pack : {profile.animations_pack}\n"
         f"Barre d'état : {profile.status_bar.value}\n"
         "Ce fichier ne modifie pas l'affichage natif de Momentum : c'est une "
-        "extension de préférences propre à Momentum Ultra.\n"
+        "extension de préférences propre à Flopper.\n"
     ).encode()
 
     return [

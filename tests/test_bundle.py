@@ -10,8 +10,8 @@ from pathlib import Path
 
 import pytest
 
-from momentum_ultra.bundle import BundleError, export_bundle, import_bundle
-from momentum_ultra.manifest import AppEntry, AssetEntry, PackManifest
+from flopper.bundle import BundleError, export_bundle, import_bundle
+from flopper.manifest import AppEntry, AssetEntry, PackManifest
 
 
 def test_bundle_roundtrip(tmp_path: Path) -> None:

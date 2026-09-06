@@ -1,6 +1,6 @@
-# momentum-ultra
+# flopper
 
-Outil de préparation et d'onboarding complet pour Flipper Zero sous firmware Momentum Ultra : installation d'un pack d'apps curé, d'un asset pack, d'un profil de réglages région-safe, des dictionnaires de saisie rapide, et d'un premier démarrage guidé.
+Outil de préparation et d'onboarding complet pour Flipper Zero sous firmware Flopper : installation d'un pack d'apps curé, d'un asset pack, d'un profil de réglages région-safe, des dictionnaires de saisie rapide, et d'un premier démarrage guidé.
 
 ## Ce que ce projet ne fait pas
 
@@ -25,28 +25,28 @@ Outil de préparation et d'onboarding complet pour Flipper Zero sous firmware Mo
 .venv\Scripts\activate
 
 # Vérifier la détection du Flipper
-momentum-ultra --detect
+flopper --detect
 
 # Diagnostiquer les modules d'extension externes connectés (GPIO)
-momentum-ultra --diagnose-modules
+flopper --diagnose-modules
 
 # Consulter la bibliothèque de scripts BadUSB intégrés
-momentum-ultra --list-payloads
+flopper --list-payloads
 
 # Lancer la simulation d'installation (mode sans risque par défaut)
-momentum-ultra --install
+flopper --install
 
 # Lancer l'installation avec un thème spécifique et un profil régional
-momentum-ultra --install --theme dark_stealth --region EU --no-dry-run
+flopper --install --theme dark_stealth --region EU --no-dry-run
 
 # Sauvegarder les captures du Flipper vers un dossier local
-momentum-ultra --backup-captures ./mes_captures
+flopper --backup-captures ./mes_captures
 
 # Exporter le pack complet vers un bundle partageable
-momentum-ultra --export-bundle mon_pack.tar.gz
+flopper --export-bundle mon_pack.tar.gz
 
 # Installer un bundle personnalisé téléchargé
-momentum-ultra --install --bundle mon_pack.tar.gz --no-dry-run
+flopper --install --bundle mon_pack.tar.gz --no-dry-run
 ```
 
 ## Développement et tests

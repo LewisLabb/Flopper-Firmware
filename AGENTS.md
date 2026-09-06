@@ -1,4 +1,4 @@
-# momentum-ultra
+# flopper
 
 Outil qui prépare un Flipper Zero fraîchement flashé en Momentum : installation d'un pack d'apps curé, d'un asset pack, d'un profil de réglages, et d'un premier démarrage guidé.
 

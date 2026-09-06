@@ -4,7 +4,7 @@ import json
 from dataclasses import dataclass
 from enum import Enum
 
-from momentum_ultra.manifest import AssetEntry
+from flopper.manifest import AssetEntry
 
 
 class TargetOS(str, Enum):
@@ -74,8 +74,8 @@ _DEFAULT_PAYLOADS: list[BadUSBPayload] = [
         filename="demo_banner.txt",
         target_os=TargetOS.CROSS_PLATFORM,
         category=PayloadCategory.DEMO,
-        description="Saisit une bannière de bienvenue Momentum Ultra.",
-        script_content="DELAY 1000\nSTRING Momentum Ultra - Flipper Zero Onboarding Completed!\nENTER\n",
+        description="Saisit une bannière de bienvenue Flopper.",
+        script_content="DELAY 1000\nSTRING Flopper - Flipper Zero Onboarding Completed!\nENTER\n",
     ),
 ]
 

@@ -1,4 +1,4 @@
-"""Packaging, export, and import of shareable Momentum Ultra bundles."""
+"""Packaging, export, and import of shareable Flopper bundles."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import json
 import tarfile
 from pathlib import Path
 
-from momentum_ultra.manifest import (
+from flopper.manifest import (
     PackManifest,
     load_manifest_from_dict,
 )

@@ -16,16 +16,16 @@ Revue obligatoire par le sous-agent `reviseur` de Claude Code avant fusion.
 
 ## Objectif
 
-Conformément au Pilier 5 du brief Momentum Ultra (« Gestionnaire de modules unifié »), permettre l'auto-détection et la configuration guidée des cartes d'extension matérielles branchées sur les broches GPIO du Flipper Zero (CC1101 pour Sub-GHz externe, nRF24 pour le 2.4 GHz, ESP32 pour Wi-Fi Marauder, et cartes combinées 2-en-1). Générer la configuration des broches et des applications associées sous `/ext/settings/modules.json`.
+Conformément au Pilier 5 du brief Flopper (« Gestionnaire de modules unifié »), permettre l'auto-détection et la configuration guidée des cartes d'extension matérielles branchées sur les broches GPIO du Flipper Zero (CC1101 pour Sub-GHz externe, nRF24 pour le 2.4 GHz, ESP32 pour Wi-Fi Marauder, et cartes combinées 2-en-1). Générer la configuration des broches et des applications associées sous `/ext/settings/modules.json`.
 
 ## Périmètre
 
 Fichiers à créer ou modifier, et eux seuls :
 
 ```text
-src/momentum_ultra/modules.py
-src/momentum_ultra/cli.py
-src/momentum_ultra/installer.py
+src/flopper/modules.py
+src/flopper/cli.py
+src/flopper/installer.py
 tests/test_modules.py
 tests/test_cli.py
 taches/tache-09-gestionnaire-modules.md
@@ -38,7 +38,7 @@ taches/tache-09-gestionnaire-modules.md
 
 ## Contrat
 
-### `src/momentum_ultra/modules.py`
+### `src/flopper/modules.py`
 
 ```python
 from dataclasses import dataclass
@@ -90,7 +90,7 @@ def export_modules_settings(active_modules: list[ModuleType]) -> dict[str, Any]:
     """Export active modules configuration dictionary for /ext/settings/modules.json."""
 ```
 
-### `src/momentum_ultra/cli.py`
+### `src/flopper/cli.py`
 
 - Ajout de l'option `--diagnose-modules` : interroge le Flipper Zero pour détecter les modules externes branchés et affiche un bilan de diagnostic en français.
 - Intégration de la configuration des modules dans le pack d'installation.
@@ -153,7 +153,7 @@ Leçon d'aiguillage : mal aiguillée pour sa partie protocole. Les profils de
 
 ## Correction requise (priorité 6) — 2026-09-06
 
-Cette section **remplace la partie « Contrat » de la fiche pour `modules.py` / `cli.py` / `installer.py`** — périmètre inchangé (`src/momentum_ultra/modules.py`, `src/momentum_ultra/cli.py`, `src/momentum_ultra/installer.py`, `tests/test_modules.py`, `tests/test_cli.py`, cette fiche). On corrige sur la même branche.
+Cette section **remplace la partie « Contrat » de la fiche pour `modules.py` / `cli.py` / `installer.py`** — périmètre inchangé (`src/flopper/modules.py`, `src/flopper/cli.py`, `src/flopper/installer.py`, `tests/test_modules.py`, `tests/test_cli.py`, cette fiche). On corrige sur la même branche.
 
 ### Ce qui a été vérifié, et comment
 

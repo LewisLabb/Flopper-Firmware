@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import serial
 
-from momentum_ultra.device import (
+from flopper.device import (
     FLIPPER_PID,
     FLIPPER_VID,
     FlipperDevice,

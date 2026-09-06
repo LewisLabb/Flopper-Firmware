@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from momentum_ultra.badusb import (
+from flopper.badusb import (
     BadUSBPayload,
     PayloadCategory,
     TargetOS,
@@ -12,7 +12,7 @@ from momentum_ultra.badusb import (
     get_default_payloads,
     validate_duckyscript,
 )
-from momentum_ultra.manifest import AssetEntry
+from flopper.manifest import AssetEntry
 
 
 def test_get_default_payloads() -> None:

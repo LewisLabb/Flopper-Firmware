@@ -11,11 +11,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 import serial
 
-from momentum_ultra import __version__
-from momentum_ultra.bundle import export_bundle
-from momentum_ultra.cli import _build_parser, main
-from momentum_ultra.device import FLIPPER_PID, FLIPPER_VID
-from momentum_ultra.manifest import PackManifest
+from flopper import __version__
+from flopper.bundle import export_bundle
+from flopper.cli import _build_parser, main
+from flopper.device import FLIPPER_PID, FLIPPER_VID
+from flopper.manifest import PackManifest
 
 
 def _make_mock_flipper_port(device: str = "COM3") -> MagicMock:
@@ -90,7 +90,9 @@ def test_main_version(capsys: pytest.CaptureFixture[str]) -> None:
 def test_main_no_args_shows_help(capsys: pytest.CaptureFixture[str]) -> None:
     """Test that running with no arguments prints help and exits with 0."""
     assert main([]) == 0
-    assert "momentum-ultra" in capsys.readouterr().out
+    output = capsys.readouterr().out
+    assert "flopper" in output.lower()
+    assert "momentum-ultra" not in output.lower()
 
 
 def test_main_help_theme_unqualified_absent(
@@ -100,7 +102,7 @@ def test_main_help_theme_unqualified_absent(
     main(["--help"])
     captured = capsys.readouterr().out
     assert "Thème visuel Momentum" not in captured
-    assert "Profil de préférences visuelles Momentum Ultra" in captured
+    assert "Profil de préférences visuelles Flopper" in captured
 
 
 def test_dry_run_flag_parsing() -> None:
@@ -202,7 +204,7 @@ def test_main_install_modules_declared() -> None:
     """Test --install with --modules writes declared modules into modules.json."""
     with (
         _mock_flipper(),
-        patch("momentum_ultra.cli.execute_install_plan") as mock_exec,
+        patch("flopper.cli.execute_install_plan") as mock_exec,
     ):
         assert main(["--install", "--modules", "cc1101,nrf24", "--dry-run"]) == 0
         plan = mock_exec.call_args.args[1]
@@ -217,7 +219,7 @@ def test_main_install_modules_default_empty() -> None:
     """Test --install without --modules writes empty active_modules list in modules.json."""
     with (
         _mock_flipper(),
-        patch("momentum_ultra.cli.execute_install_plan") as mock_exec,
+        patch("flopper.cli.execute_install_plan") as mock_exec,
     ):
         assert main(["--install", "--dry-run"]) == 0
         plan = mock_exec.call_args.args[1]

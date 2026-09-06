@@ -4,8 +4,8 @@ import json
 
 import pytest
 
-from momentum_ultra.manifest import AssetEntry
-from momentum_ultra.theme import (
+from flopper.manifest import AssetEntry
+from flopper.theme import (
     StatusBarStyle,
     ThemeName,
     export_theme_settings,

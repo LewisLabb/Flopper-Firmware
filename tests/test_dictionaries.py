@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from momentum_ultra.dictionaries import (
+from flopper.dictionaries import (
     DictionaryCategory,
     DictionaryEntry,
     PredictiveDictionary,

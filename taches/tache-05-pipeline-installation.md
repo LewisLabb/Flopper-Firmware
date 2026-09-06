@@ -23,8 +23,8 @@ Connecter ensemble la détection du Flipper, le chargement du pack par défaut, 
 Fichiers à créer ou modifier, et eux seuls :
 
 ```text
-src/momentum_ultra/installer.py
-src/momentum_ultra/cli.py
+src/flopper/installer.py
+src/flopper/cli.py
 tests/test_installer.py
 tests/test_cli.py
 taches/tache-05-pipeline-installation.md
@@ -38,16 +38,16 @@ taches/tache-05-pipeline-installation.md
 
 ## Contrat
 
-### `src/momentum_ultra/installer.py`
+### `src/flopper/installer.py`
 
 ```python
 from collections.abc import Callable
-from momentum_ultra.flipper_client import FlipperClient
-from momentum_ultra.manifest import PlanAction, PackManifest
+from flopper.flipper_client import FlipperClient
+from flopper.manifest import PlanAction, PackManifest
 
 
 def get_default_pack() -> PackManifest:
-    """Return the built-in curated Momentum Ultra pack."""
+    """Return the built-in curated Flopper pack."""
 
 
 def execute_install_plan(
@@ -58,9 +58,9 @@ def execute_install_plan(
     """Execute each action in the installation plan on the Flipper Zero."""
 ```
 
-### `src/momentum_ultra/cli.py`
+### `src/flopper/cli.py`
 
-- Commande `momentum-ultra` :
+- Commande `flopper` :
   - Support de `--install` (ou `--prepare`)
   - Support de `--yes` pour confirmation non-interactive
   - Si `--install` est activé :

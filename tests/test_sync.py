@@ -4,12 +4,12 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from momentum_ultra.flipper_client import (
+from flopper.flipper_client import (
     FlipperClient,
     FlipperCommandError,
     StorageItem,
 )
-from momentum_ultra.sync import (
+from flopper.sync import (
     CaptureItem,
     SyncReport,
     export_captures_catalog,

@@ -2,7 +2,7 @@
 
 ## Titre
 
-Poser le squelette Python du projet momentum-ultra.
+Poser le squelette Python du projet flopper.
 
 ## Agent assigné
 
@@ -26,8 +26,8 @@ Fichiers à créer, et eux seuls :
 .gitignore
 README.md
 pyproject.toml
-src/momentum_ultra/__init__.py
-src/momentum_ultra/cli.py
+src/flopper/__init__.py
+src/flopper/cli.py
 tests/test_cli.py
 taches/.gitkeep
 ```
@@ -42,17 +42,17 @@ taches/.gitkeep
 
 **`pyproject.toml`**
 
-- Nom du paquet : `momentum-ultra` · version `0.1.0` · Python `>=3.11`
+- Nom du paquet : `flopper` · version `0.1.0` · Python `>=3.11`
 - Build backend : `setuptools`, disposition `src/`
 - Dépendance : `pyserial`
 - Groupe optionnel `dev` : `pytest`, `ruff`
-- Script console : `momentum-ultra = "momentum_ultra.cli:main"`
+- Script console : `flopper = "flopper.cli:main"`
 
-**`src/momentum_ultra/__init__.py`**
+**`src/flopper/__init__.py`**
 
 - Expose `__version__: str = "0.1.0"`
 
-**`src/momentum_ultra/cli.py`**
+**`src/flopper/cli.py`**
 
 - Fonction unique : `def main(argv: list[str] | None = None) -> int:`
 - Utilise `argparse`. Deux options seulement :
@@ -78,8 +78,8 @@ taches/.gitkeep
 - [ ] `pytest` passe, avec au moins les trois tests listés
 - [ ] `ruff check .` ne signale rien
 - [ ] `ruff format --check .` ne signale rien
-- [ ] `momentum-ultra --version` affiche `0.1.0`
-- [ ] `momentum-ultra` sans argument affiche l'aide et sort en code `0`
+- [ ] `flopper --version` affiche `0.1.0`
+- [ ] `flopper` sans argument affiche l'aide et sort en code `0`
 - [ ] Aucun fichier hors périmètre créé ou modifié
 - [ ] Aucun `import serial` nulle part
 
@@ -100,7 +100,7 @@ incohérent ».
 Cette section ne réécrit pas le contrat exécuté : le verdict ci-dessous porte sur la
 fiche telle qu'elle a été donnée. Elle fixe la formulation à reprendre.
 
-- **`src/momentum_ultra/cli.py` — au lieu de « Fonction unique »** : « Une seule fonction
+- **`src/flopper/cli.py` — au lieu de « Fonction unique »** : « Une seule fonction
   *publique* : `def main(argv: list[str] | None = None) -> int:`. Les fonctions privées
   (préfixées `_`) sont autorisées si elles servent le contrat. »
 - **Test du garde-fou — au lieu de « l'analyse de `[]` produit `dry_run is True` »** :
@@ -147,12 +147,12 @@ Leçon d'aiguillage : bon agent. Tâche mécanique, contrat spécifié, erreurs
 
 | Critère | Sortie |
 | --- | --- |
-| `pip install -e ".[dev]"` | `Successfully installed ... momentum-ultra-0.1.0`, code 0 |
+| `pip install -e ".[dev]"` | `Successfully installed ... flopper-0.1.0`, code 0 |
 | `pytest` | `3 passed`, code 0 |
 | `ruff check .` | `All checks passed!`, code 0 |
 | `ruff format --check .` | `already formatted`, code 0 |
-| `momentum-ultra --version` | `0.1.0`, code 0 |
-| `momentum-ultra` (sans argument) | aide affichée, code 0 |
+| `flopper --version` | `0.1.0`, code 0 |
+| `flopper` (sans argument) | aide affichée, code 0 |
 | Aucun `import serial` | aucune occurrence |
 | Périmètre | 7 fichiers, tous autorisés |
 

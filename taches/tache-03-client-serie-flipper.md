@@ -23,7 +23,7 @@ Fournir un client de communication Python pour interagir avec le shell CLI du Fl
 Fichiers à créer ou modifier, et eux seuls :
 
 ```text
-src/momentum_ultra/flipper_client.py
+src/flopper/flipper_client.py
 tests/test_flipper_client.py
 taches/tache-03-client-serie-flipper.md
 ```
@@ -36,7 +36,7 @@ taches/tache-03-client-serie-flipper.md
 
 ## Contrat
 
-### `src/momentum_ultra/flipper_client.py`
+### `src/flopper/flipper_client.py`
 
 ```python
 from dataclasses import dataclass
@@ -186,7 +186,7 @@ Leçon d'aiguillage : mal aiguillée. La fiche la confie à Gemini au motif
 
 Cette section **remplace la partie « Contrat » de la fiche pour `flipper_client.py` et `tests/test_flipper_client.py` uniquement** — le reste de la fiche (branche, périmètre, agent assigné) ne change pas. On corrige sur la même branche, on ne recommence pas : « on ne fusionne jamais un rejet » (`AGENTS.md`), pas « on jette et on réécrit ».
 
-**Périmètre inchangé** : `src/momentum_ultra/flipper_client.py`, `tests/test_flipper_client.py`, cette fiche. Rien d'autre.
+**Périmètre inchangé** : `src/flopper/flipper_client.py`, `tests/test_flipper_client.py`, cette fiche. Rien d'autre.
 
 Les tâches 05 (pipeline d'installation), 09 (gestionnaire de modules — pour sa part qui n'invente pas son propre protocole GPIO, défaut distinct) et 11 (sync captures) dépendent de ce module et ne doivent PAS être ré-exécutées avant que cette correction soit acceptée en revue.
 

@@ -8,11 +8,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from momentum_ultra.cli import main
-from momentum_ultra.device import FLIPPER_PID, FLIPPER_VID
-from momentum_ultra.installer import build_region_settings_action
-from momentum_ultra.manifest import ActionType, PlanAction
-from momentum_ultra.regions import (
+from flopper.cli import main
+from flopper.device import FLIPPER_PID, FLIPPER_VID
+from flopper.installer import build_region_settings_action
+from flopper.manifest import ActionType, PlanAction
+from flopper.regions import (
     RegionCode,
     export_region_config,
     get_available_regions,
@@ -127,7 +127,7 @@ def test_main_install_plan_contains_both_settings_files() -> None:
     with (
         patch("serial.tools.list_ports.comports", return_value=[mock_port]),
         patch("serial.Serial", return_value=mock_serial),
-        patch("momentum_ultra.cli.execute_install_plan", side_effect=mock_exec),
+        patch("flopper.cli.execute_install_plan", side_effect=mock_exec),
     ):
         exit_code = main(["--install", "--region", "US", "--dry-run"])
         assert exit_code == 0

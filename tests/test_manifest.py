@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from momentum_ultra.manifest import (
+from flopper.manifest import (
     ActionType,
     AppEntry,
     AssetEntry,

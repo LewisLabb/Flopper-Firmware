@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from momentum_ultra.flipper_client import (
+from flopper.flipper_client import (
     FlipperClient,
     FlipperCommandError,
 )

@@ -1,6 +1,6 @@
-# Feuille de route — momentum-ultra
+# Feuille de route — flopper
 
-Source : *Momentum Ultra — brief de conception & feuille de route*, septembre 2026. Ce fichier est la version exécutable du brief : c'est lui qui décide de l'ordre des fiches de tâche. Le brief reste le document de vision ; en cas de désaccord entre les deux, c'est ce fichier qui tranche, et le brief qu'on corrige.
+Source : *Flopper — brief de conception & feuille de route*, septembre 2026. Ce fichier est la version exécutable du brief : c'est lui qui décide de l'ordre des fiches de tâche. Le brief reste le document de vision ; en cas de désaccord entre les deux, c'est ce fichier qui tranche, et le brief qu'on corrige.
 
 ## Promesse
 

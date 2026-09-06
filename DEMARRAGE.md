@@ -4,12 +4,12 @@ Ce paquet contient la base de gouvernance du projet, déjà rangée. Tu n'as rie
 
 ## 1. Décompresser
 
-Décompresse ce paquet **à la racine de ton dossier `momentum-ultra`** (celui qui est lié à ton dépôt GitHub, sur ton `C:`).
+Décompresse ce paquet **à la racine de ton dossier `flopper`** (celui qui est lié à ton dépôt GitHub, sur ton `C:`).
 
 Après décompression, ton dossier doit contenir :
 
 ```text
-momentum-ultra/
+flopper/
 ├── AGENTS.md                 ← règles communes aux deux agents
 ├── CLAUDE.md                 ← renvoi vers AGENTS.md pour Claude Code
 ├── DEMARRAGE.md              ← ce fichier
@@ -35,7 +35,7 @@ git push
 
 ## 3. Exécuter la première tâche (Gemini / Antigravity)
 
-Ouvre Antigravity sur le dossier `momentum-ultra`. Crée la branche `tache/squelette-projet`. Puis donne à l'agent, mot pour mot :
+Ouvre Antigravity sur le dossier `flopper`. Crée la branche `tache/squelette-projet`. Puis donne à l'agent, mot pour mot :
 
 > Lis `AGENTS.md`, puis exécute `taches/tache-01-squelette-projet.md`.
 

@@ -16,15 +16,15 @@ Revue obligatoire par le sous-agent `reviseur` de Claude Code avant fusion.
 
 ## Objectif
 
-Conformément au Pilier 4 du brief (« Bundle partageable »), permettre à un utilisateur ou à la communauté de packager un ensemble complet (manifeste + applications `.fap` + assets + profil de réglages) dans une archive unique `.tar.gz`, et de l'installer directement sur n'importe quel Flipper Zero avec `momentum-ultra --install --bundle <fichier>`.
+Conformément au Pilier 4 du brief (« Bundle partageable »), permettre à un utilisateur ou à la communauté de packager un ensemble complet (manifeste + applications `.fap` + assets + profil de réglages) dans une archive unique `.tar.gz`, et de l'installer directement sur n'importe quel Flipper Zero avec `flopper --install --bundle <fichier>`.
 
 ## Périmètre
 
 Fichiers à créer ou modifier, et eux seuls :
 
 ```text
-src/momentum_ultra/bundle.py
-src/momentum_ultra/cli.py
+src/flopper/bundle.py
+src/flopper/cli.py
 tests/test_bundle.py
 tests/test_cli.py
 taches/tache-07-bundles-partageables.md
@@ -37,11 +37,11 @@ taches/tache-07-bundles-partageables.md
 
 ## Contrat
 
-### `src/momentum_ultra/bundle.py`
+### `src/flopper/bundle.py`
 
 ```python
 from pathlib import Path
-from momentum_ultra.manifest import PackManifest
+from flopper.manifest import PackManifest
 
 
 class BundleError(Exception):
@@ -56,7 +56,7 @@ def import_bundle(bundle_path: str | Path) -> PackManifest:
     """Load, validate and unpack a PackManifest from a bundle archive."""
 ```
 
-### `src/momentum_ultra/cli.py`
+### `src/flopper/cli.py`
 
 - Ajout de l'option `--export-bundle <chemin>` : exporte le pack par défaut vers une archive partageable.
 - Ajout de l'option `--bundle <chemin>` : utilise le bundle spécifié au lieu du pack par défaut lors de `--install`.
@@ -130,7 +130,7 @@ Leçon d'aiguillage : mal aiguillée pour sa moitié critique. La plomberie
 
 ## Correction requise (priorité 5, après fusion de la correction de tache-04) — 2026-09-06
 
-Cette section **remplace la partie « Contrat » de la fiche pour `bundle.py`** — périmètre inchangé (`src/momentum_ultra/bundle.py`, `src/momentum_ultra/cli.py`, `tests/test_bundle.py`, `tests/test_cli.py`, cette fiche). On corrige sur la même branche.
+Cette section **remplace la partie « Contrat » de la fiche pour `bundle.py`** — périmètre inchangé (`src/flopper/bundle.py`, `src/flopper/cli.py`, `tests/test_bundle.py`, `tests/test_cli.py`, cette fiche). On corrige sur la même branche.
 
 **Condition préalable** : cette correction suppose que la correction de `tache-04` (confinement `/ext/` et validation stricte des segments de chemin dans `manifest.py::load_manifest_from_dict`) est déjà fusionnée. Si ce n'est pas le cas, appliquer d'abord `tache-04` — sinon les critères de confinement ci-dessous échoueraient pour la mauvaise raison (le trou serait encore dans `manifest.py`, pas dans `bundle.py`).
 

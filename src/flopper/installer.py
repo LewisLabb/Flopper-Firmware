@@ -1,31 +1,31 @@
-"""Installation pipeline executor for Momentum Ultra packages."""
+"""Installation pipeline executor for Flopper packages."""
 
 from __future__ import annotations
 
 import json
 from collections.abc import Callable
 
-from momentum_ultra.badusb import export_payload_assets, get_default_payloads
-from momentum_ultra.dictionaries import (
+from flopper.badusb import export_payload_assets, get_default_payloads
+from flopper.dictionaries import (
     export_dictionary_assets,
     get_default_dictionaries,
 )
-from momentum_ultra.flipper_client import FlipperClient
-from momentum_ultra.manifest import (
+from flopper.flipper_client import FlipperClient
+from flopper.manifest import (
     ActionType,
     AppEntry,
     AssetEntry,
     PackManifest,
     PlanAction,
 )
-from momentum_ultra.modules import ModuleType, export_modules_settings
-from momentum_ultra.regions import (
+from flopper.modules import ModuleType, export_modules_settings
+from flopper.regions import (
     RegionCode,
     RegionProfile,
     export_region_config,
     get_region_profile,
 )
-from momentum_ultra.theme import (
+from flopper.theme import (
     ThemeName,
     export_theme_settings,
     get_theme_assets,
@@ -38,7 +38,7 @@ def get_default_pack(
     modules: list[ModuleType] | None = None,
     theme: ThemeName | str = ThemeName.DEFAULT,
 ) -> PackManifest:
-    """Return the built-in curated Momentum Ultra pack configured for a region, modules, and theme."""
+    """Return the built-in curated Flopper pack configured for a region, modules, and theme."""
     profile = get_region_profile(region)
     region_data = export_region_config(profile)
     theme_profile = get_theme_profile(theme)
@@ -50,7 +50,7 @@ def get_default_pack(
     modules_data = export_modules_settings(modules_list)
 
     return PackManifest(
-        name="Momentum-Ultra-Curated-Pack",
+        name="Flopper-Curated-Pack",
         version="1.0.0",
         description=f"Pack de démarrage optimisé avec applications curées, profil {profile.name} et thème {theme_profile.title}.",
         apps=[
@@ -89,7 +89,7 @@ def get_default_pack(
             *payload_assets,
         ],
         settings={
-            "profile_name": "Momentum Ultra Default",
+            "profile_name": "Flopper Default",
             "dark_mode": True,
             "animations_enabled": True,
             "log_level": "info",

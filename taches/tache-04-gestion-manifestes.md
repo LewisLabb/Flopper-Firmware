@@ -23,7 +23,7 @@ Permettre à l'outil de charger et valider des manifestes de configuration défi
 Fichiers à créer ou modifier, et eux seuls :
 
 ```text
-src/momentum_ultra/manifest.py
+src/flopper/manifest.py
 tests/test_manifest.py
 taches/tache-04-gestion-manifestes.md
 ```
@@ -36,7 +36,7 @@ taches/tache-04-gestion-manifestes.md
 
 ## Contrat
 
-### `src/momentum_ultra/manifest.py`
+### `src/flopper/manifest.py`
 
 ```python
 from dataclasses import dataclass, field
@@ -170,7 +170,7 @@ Leçon d'aiguillage : la modélisation pure convenait à Gemini, mais la
 
 ## Correction requise (priorité 3) — 2026-09-05
 
-Cette section **remplace la partie « Contrat » de la fiche pour `manifest.py` uniquement** — périmètre inchangé (`src/momentum_ultra/manifest.py`, `tests/test_manifest.py`, cette fiche). On corrige sur la même branche.
+Cette section **remplace la partie « Contrat » de la fiche pour `manifest.py` uniquement** — périmètre inchangé (`src/flopper/manifest.py`, `tests/test_manifest.py`, cette fiche). On corrige sur la même branche.
 
 `tache-07` (bundles partageables) hérite de ce même trou par sa branche d'import JSON (`bundle.py:86-93`) — cette correction la débloque partiellement, mais `tache-07` a ses propres défauts supplémentaires (branche `.tar.gz` qui ne passe même pas par `load_manifest_from_dict`, absence de somme de contrôle, régression sur l'avertissement légal) qui restent à traiter séparément, sur sa propre fiche.
 

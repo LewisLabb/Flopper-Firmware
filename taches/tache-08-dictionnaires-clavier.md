@@ -16,15 +16,15 @@ Revue obligatoire par le sous-agent `reviseur` de Claude Code avant fusion.
 
 ## Objectif
 
-Conformément au Pilier 3 du brief Momentum Ultra (« Refonte de la saisie — Clavier prédictif avec pré-saisies et favoris »), générer les dictionnaires et listes de pré-saisies (SSID fréquents, IPs de laboratoire, templates de payloads BadUSB/SubGHz) sous `/ext/momentum/dicts/` pour accélérer la saisie au D-Pad et diviser par ~3 le nombre de clics pour configurer un réseau ou un payload.
+Conformément au Pilier 3 du brief Flopper (« Refonte de la saisie — Clavier prédictif avec pré-saisies et favoris »), générer les dictionnaires et listes de pré-saisies (SSID fréquents, IPs de laboratoire, templates de payloads BadUSB/SubGHz) sous `/ext/momentum/dicts/` pour accélérer la saisie au D-Pad et diviser par ~3 le nombre de clics pour configurer un réseau ou un payload.
 
 ## Périmètre
 
 Fichiers à créer ou modifier, et eux seuls :
 
 ```text
-src/momentum_ultra/dictionaries.py
-src/momentum_ultra/installer.py
+src/flopper/dictionaries.py
+src/flopper/installer.py
 tests/test_dictionaries.py
 tests/test_installer.py
 taches/tache-08-dictionnaires-clavier.md
@@ -37,12 +37,12 @@ taches/tache-08-dictionnaires-clavier.md
 
 ## Contrat
 
-### `src/momentum_ultra/dictionaries.py`
+### `src/flopper/dictionaries.py`
 
 ```python
 from dataclasses import dataclass
 from enum import Enum
-from momentum_ultra.manifest import AssetEntry
+from flopper.manifest import AssetEntry
 
 
 class DictionaryCategory(str, Enum):
@@ -78,7 +78,7 @@ def export_dictionary_assets(dictionary: PredictiveDictionary) -> list[AssetEntr
     """Convert predictive dictionaries into Flipper SD card AssetEntry files (/ext/momentum/dicts/*.txt)."""
 ```
 
-### `src/momentum_ultra/installer.py`
+### `src/flopper/installer.py`
 
 - Intégration automatique des `AssetEntry` générées par `export_dictionary_assets()` dans le pack par défaut retourné par `get_default_pack()`.
 

@@ -16,16 +16,16 @@ Revue obligatoire par le sous-agent `reviseur` de Claude Code avant fusion.
 
 ## Objectif
 
-Conformément au Pilier 6 du brief Momentum Ultra (« Responsable par défaut »), l'outil doit permettre à l'utilisateur de spécifier son profil régional (`EU`, `US`, `JP`, `WORLD`) dès l'onboarding. Chaque profil active les plages de fréquences adaptées aux réglementations locales (CE, FCC, MIC) avec un étiquetage transparent des bandes d'émission/réception. Le profil généré est injecté dans le plan d'installation sous `/ext/settings/region.json`.
+Conformément au Pilier 6 du brief Flopper (« Responsable par défaut »), l'outil doit permettre à l'utilisateur de spécifier son profil régional (`EU`, `US`, `JP`, `WORLD`) dès l'onboarding. Chaque profil active les plages de fréquences adaptées aux réglementations locales (CE, FCC, MIC) avec un étiquetage transparent des bandes d'émission/réception. Le profil généré est injecté dans le plan d'installation sous `/ext/settings/region.json`.
 
 ## Périmètre
 
 Fichiers à créer ou modifier, et eux seuls :
 
 ```text
-src/momentum_ultra/regions.py
-src/momentum_ultra/cli.py
-src/momentum_ultra/installer.py
+src/flopper/regions.py
+src/flopper/cli.py
+src/flopper/installer.py
 tests/test_regions.py
 tests/test_cli.py
 taches/tache-06-profils-region-safe.md
@@ -38,7 +38,7 @@ taches/tache-06-profils-region-safe.md
 
 ## Contrat
 
-### `src/momentum_ultra/regions.py`
+### `src/flopper/regions.py`
 
 ```python
 from dataclasses import dataclass
@@ -87,7 +87,7 @@ def export_region_config(profile: RegionProfile) -> dict[str, object]:
     """Export region profile to Flipper settings dictionary."""
 ```
 
-### `src/momentum_ultra/cli.py` & `src/momentum_ultra/installer.py`
+### `src/flopper/cli.py` & `src/flopper/installer.py`
 
 - Option `--region {EU,US,JP,WORLD}` (valeur par défaut : `EU`).
 - Si `WORLD` est sélectionné en écriture réelle (`--no-dry-run`), afficher un avertissement légal clair : `"Attention : Le profil WORLD déverrouille les restrictions fréquentielles. L'utilisateur demeure légalement responsable des émissions radio selon sa législation locale."`
@@ -148,7 +148,7 @@ Leçon d'aiguillage : bon aiguillage (tables de fréquences déterministes, test
 
 ## Correction requise (priorité 4) — 2026-09-06
 
-Cette section **remplace la partie « Contrat » de la fiche pour `regions.py` / `cli.py` / `installer.py`** — périmètre inchangé (`src/momentum_ultra/regions.py`, `src/momentum_ultra/cli.py`, `src/momentum_ultra/installer.py`, `tests/test_regions.py`, `tests/test_cli.py`, cette fiche). On corrige sur la même branche, on ne recommence pas.
+Cette section **remplace la partie « Contrat » de la fiche pour `regions.py` / `cli.py` / `installer.py`** — périmètre inchangé (`src/flopper/regions.py`, `src/flopper/cli.py`, `src/flopper/installer.py`, `tests/test_regions.py`, `tests/test_cli.py`, cette fiche). On corrige sur la même branche, on ne recommence pas.
 
 ### Défaut 1 — `argparse(choices=...)` intercepte `--region` avant tout message français (`cli.py:62-67`)
 
@@ -172,7 +172,7 @@ Cette validation précoce couvre tous les sous-comportements, `--region` étant 
 
 `generate_install_plan` (hors périmètre de cette fiche — appartient à `tache-04`) sérialise l'intégralité de `manifest.settings` dans un unique fichier `/ext/settings/momentum_profile.json`. Le fichier `region.json`, explicitement exigé par l'Objectif et par la section CLI/installer de cette fiche, n'existe nulle part. Corriger **sans toucher à `manifest.py`** (hors périmètre), en ajoutant l'action au niveau de `installer.py` et `cli.py` :
 
-Dans `installer.py`, étendre l'import existant de `momentum_ultra.regions` pour inclure `RegionProfile`, et l'import existant de `momentum_ultra.manifest` pour inclure `ActionType`. Ajouter :
+Dans `installer.py`, étendre l'import existant de `flopper.regions` pour inclure `RegionProfile`, et l'import existant de `flopper.manifest` pour inclure `ActionType`. Ajouter :
 ```python
 import json
 

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import json
 
-from momentum_ultra.installer import build_modules_settings_action
-from momentum_ultra.manifest import ActionType
-from momentum_ultra.modules import (
+from flopper.installer import build_modules_settings_action
+from flopper.manifest import ActionType
+from flopper.modules import (
     ModuleType,
     export_modules_settings,
     get_default_module_configs,

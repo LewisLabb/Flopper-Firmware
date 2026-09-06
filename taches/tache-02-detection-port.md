@@ -23,8 +23,8 @@ Pour préparer le Flipper, l'outil doit être capable de détecter automatiqueme
 Fichiers à créer ou modifier, et eux seuls :
 
 ```text
-src/momentum_ultra/device.py
-src/momentum_ultra/cli.py
+src/flopper/device.py
+src/flopper/cli.py
 tests/test_device.py
 tests/test_cli.py
 taches/tache-02-detection-port.md
@@ -38,7 +38,7 @@ taches/tache-02-detection-port.md
 
 ## Contrat
 
-### `src/momentum_ultra/device.py`
+### `src/flopper/device.py`
 
 ```python
 from dataclasses import dataclass
@@ -89,7 +89,7 @@ Comportement attendu :
 - Si exactement un trouvé → retourne une instance de `FlipperDevice`.
 - `is_port_available(port)` tente d'ouvrir le port avec `serial.Serial(port)` puis le referme immédiatement. Retourne `True` si succès, `False` si `serial.SerialException` (ex: port occupé par qFlipper).
 
-### `src/momentum_ultra/cli.py`
+### `src/flopper/cli.py`
 
 - Mise à jour de `main` et de l'analyseur d'arguments :
   - Ajout du flag `--detect` : lance la détection du Flipper.
@@ -167,7 +167,7 @@ Leçon d'aiguillage : aiguillage mal calibré pour moitié. La détection VID/PI
 
 ## Correction requise (priorité 2, après flipper_client.py) — 2026-09-05
 
-Cette section **remplace la partie « Contrat » de la fiche pour `device.py` uniquement** — périmètre inchangé (`src/momentum_ultra/device.py`, `tests/test_device.py`, `tests/test_cli.py`, cette fiche). On corrige sur la même branche, on ne recommence pas.
+Cette section **remplace la partie « Contrat » de la fiche pour `device.py` uniquement** — périmètre inchangé (`src/flopper/device.py`, `tests/test_device.py`, `tests/test_cli.py`, cette fiche). On corrige sur la même branche, on ne recommence pas.
 
 ### Ce qui a été vérifié, et comment
 

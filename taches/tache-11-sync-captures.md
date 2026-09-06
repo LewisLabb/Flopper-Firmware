@@ -16,15 +16,15 @@ Revue obligatoire par le sous-agent `reviseur` de Claude Code avant fusion.
 
 ## Objectif
 
-Conformément au Pilier 2 du brief Momentum Ultra (« Workflow Capture & Organisation des Fichiers »), permettre à l'utilisateur de sauvegarder et d'organiser automatiquement sur son ordinateur toutes les captures réalisées sur le terrain avec le Flipper Zero (`.sub`, `.nfc`, `.rfid`, `.ir`, `.ibtn`, `.badusb`), avec conservation des métadonnées et sans jamais altérer ni supprimer les fichiers sur la carte SD de l'appareil.
+Conformément au Pilier 2 du brief Flopper (« Workflow Capture & Organisation des Fichiers »), permettre à l'utilisateur de sauvegarder et d'organiser automatiquement sur son ordinateur toutes les captures réalisées sur le terrain avec le Flipper Zero (`.sub`, `.nfc`, `.rfid`, `.ir`, `.ibtn`, `.badusb`), avec conservation des métadonnées et sans jamais altérer ni supprimer les fichiers sur la carte SD de l'appareil.
 
 ## Périmètre
 
 Fichiers à créer ou modifier, et eux seuls :
 
 ```text
-src/momentum_ultra/sync.py
-src/momentum_ultra/cli.py
+src/flopper/sync.py
+src/flopper/cli.py
 tests/test_sync.py
 tests/test_cli.py
 taches/tache-11-sync-captures.md
@@ -37,13 +37,13 @@ taches/tache-11-sync-captures.md
 
 ## Contrat
 
-### `src/momentum_ultra/sync.py`
+### `src/flopper/sync.py`
 
 ```python
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-from momentum_ultra.flipper_client import FlipperClient
+from flopper.flipper_client import FlipperClient
 
 
 CAPTURE_DIRECTORIES = {
@@ -90,7 +90,7 @@ def export_captures_catalog(report: SyncReport, destination_dir: str | Path) -> 
     """Generate captures_catalog.json in the local destination directory."""
 ```
 
-### `src/momentum_ultra/cli.py`
+### `src/flopper/cli.py`
 
 - Ajout de l'option `--backup-captures <dossier>` : sauvegarde et organise les captures du Flipper vers le répertoire local spécifié.
 
@@ -169,8 +169,8 @@ Ajoutée après la revue indépendante ci-dessus. « On corrige sur la même bra
 Fichiers à créer ou modifier, et eux seuls :
 
 ```text
-src/momentum_ultra/flipper_client.py
-src/momentum_ultra/sync.py
+src/flopper/flipper_client.py
+src/flopper/sync.py
 tests/test_flipper_client.py
 tests/test_sync.py
 taches/tache-11-sync-captures.md

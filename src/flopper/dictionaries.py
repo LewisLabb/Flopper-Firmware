@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-from momentum_ultra.manifest import AssetEntry
+from flopper.manifest import AssetEntry
 
 
 class DictionaryCategory(str, Enum):

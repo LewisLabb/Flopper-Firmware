@@ -23,9 +23,9 @@ Permettre à l'utilisateur de déployer une bibliothèque organisée de scripts 
 Fichiers à créer ou modifier, et eux seuls :
 
 ```text
-src/momentum_ultra/badusb.py
-src/momentum_ultra/installer.py
-src/momentum_ultra/cli.py
+src/flopper/badusb.py
+src/flopper/installer.py
+src/flopper/cli.py
 tests/test_badusb.py
 tests/test_cli.py
 taches/tache-12-badusb-payloads.md
@@ -38,12 +38,12 @@ taches/tache-12-badusb-payloads.md
 
 ## Contrat
 
-### `src/momentum_ultra/badusb.py`
+### `src/flopper/badusb.py`
 
 ```python
 from dataclasses import dataclass
 from enum import Enum
-from momentum_ultra.manifest import AssetEntry
+from flopper.manifest import AssetEntry
 
 
 class TargetOS(str, Enum):
@@ -87,7 +87,7 @@ def export_payload_assets(payloads: list[BadUSBPayload]) -> list[AssetEntry]:
     """Convert BadUSB payloads into AssetEntry files deployed under /ext/badusb/."""
 ```
 
-### `src/momentum_ultra/installer.py` & `src/momentum_ultra/cli.py`
+### `src/flopper/installer.py` & `src/flopper/cli.py`
 
 - Intégration des `AssetEntry` BadUSB dans `get_default_pack()`.
 - Option CLI `--list-payloads` pour consulter l'inventaire des scripts disponibles.
@@ -157,7 +157,7 @@ Ajoutée après la revue indépendante ci-dessus. Le fond était « accepté ave
 Fichiers à créer ou modifier, et eux seuls :
 
 ```text
-src/momentum_ultra/badusb.py
+src/flopper/badusb.py
 tests/test_badusb.py
 taches/tache-12-badusb-payloads.md
 ```

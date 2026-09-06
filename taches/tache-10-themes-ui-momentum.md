@@ -16,16 +16,16 @@ Revue obligatoire par le sous-agent `reviseur` de Claude Code avant fusion.
 
 ## Objectif
 
-Conformément au Pilier 1 du brief Momentum Ultra (« Architecture UI & Ergonomie Immédiate »), offrir à l'utilisateur le choix d'un thème visuel dès l'onboarding pour personnaliser instantanément l'affichage du Flipper Zero : style de la barre d'état (pourcentage de batterie, horloge, indicateurs radio), disposition du menu et animations de bureau.
+Conformément au Pilier 1 du brief Flopper (« Architecture UI & Ergonomie Immédiate »), offrir à l'utilisateur le choix d'un thème visuel dès l'onboarding pour personnaliser instantanément l'affichage du Flipper Zero : style de la barre d'état (pourcentage de batterie, horloge, indicateurs radio), disposition du menu et animations de bureau.
 
 ## Périmètre
 
 Fichiers à créer ou modifier, et eux seuls :
 
 ```text
-src/momentum_ultra/theme.py
-src/momentum_ultra/cli.py
-src/momentum_ultra/installer.py
+src/flopper/theme.py
+src/flopper/cli.py
+src/flopper/installer.py
 tests/test_theme.py
 tests/test_cli.py
 taches/tache-10-themes-ui-momentum.md
@@ -38,13 +38,13 @@ taches/tache-10-themes-ui-momentum.md
 
 ## Contrat
 
-### `src/momentum_ultra/theme.py`
+### `src/flopper/theme.py`
 
 ```python
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any
-from momentum_ultra.manifest import AssetEntry
+from flopper.manifest import AssetEntry
 
 
 class ThemeName(str, Enum):
@@ -93,7 +93,7 @@ def get_theme_assets(profile: ThemeProfile) -> list[AssetEntry]:
     """Return theme-specific asset entries for dolphin/animations."""
 ```
 
-### `src/momentum_ultra/cli.py` & `src/momentum_ultra/installer.py`
+### `src/flopper/cli.py` & `src/flopper/installer.py`
 
 - Ajout de l'option `--theme {default,dark_stealth,retro_gamer,cyberpunk}` (valeur par défaut : `default`).
 - Intégration du profil de thème dans le pack d'installation (`/ext/settings/momentum_ui.json` et assets de personnalisation sous `/ext/dolphin/`).
@@ -164,11 +164,11 @@ Leçon d'aiguillage : mal aiguillée. Le critère d'AGENTS.md — « un test
 
 **Décision de portée (2026-09-06, tranchée par l'utilisateur)** : entre réécrire `get_theme_assets` contre le vrai format binaire des asset packs Momentum (`.bm`/`.bmx`, `manifest.txt` sous `/ext/asset_packs/<Nom>/`) et redescendre en extension custom honnêtement documentée, le choix retenu est **la seconde option**. Le mécanisme JSON actuel est conservé tel quel (il fonctionne, il est testé) ; ce qui change, c'est que le contrat, la documentation et l'aide en ligne cessent de laisser croire à une conformité Momentum native qui n'existe pas. Générer de vraies frames bitmap sans matériel pour valider le rendu aurait signifié deviner un format binaire non vérifiable dans ce contexte — le même écueil que celui qui a produit le défaut initial.
 
-Cette section **remplace la partie « Contrat » de la fiche pour `theme.py` uniquement** — périmètre inchangé (`src/momentum_ultra/theme.py`, `src/momentum_ultra/cli.py`, `tests/test_theme.py`, `tests/test_cli.py`, cette fiche). On corrige sur la même branche.
+Cette section **remplace la partie « Contrat » de la fiche pour `theme.py` uniquement** — périmètre inchangé (`src/flopper/theme.py`, `src/flopper/cli.py`, `tests/test_theme.py`, `tests/test_cli.py`, cette fiche). On corrige sur la même branche.
 
 ### Note de portée à intégrer dans le code et la documentation
 
-Cette fonctionnalité configure un **profil de préférences propre à Momentum Ultra** (JSON interne + note texte), pas un véritable thème visuel Momentum. Installé seul, il ne change rien à l'affichage réel d'un Flipper sous Momentum : un vrai changement d'apparence nécessiterait le format natif des asset packs (`/ext/asset_packs/<Nom>/{Anims,Icons}/`, frames `.bm`/`.bmx`, `manifest.txt`), qui n'est pas implémenté ici et reste hors périmètre de cette correction.
+Cette fonctionnalité configure un **profil de préférences propre à Flopper** (JSON interne + note texte), pas un véritable thème visuel Momentum. Installé seul, il ne change rien à l'affichage réel d'un Flipper sous le firmware standard : un vrai changement d'apparence nécessiterait le format natif des asset packs (`/ext/asset_packs/<Nom>/{Anims,Icons}/`, frames `.bm`/`.bmx`, `manifest.txt`), qui n'est pas implémenté ici et reste hors périmètre de cette correction.
 
 ### Défaut 1 — `get_theme_assets` écrit sous `/ext/dolphin/`, un chemin qui laisse croire à une intégration native (`theme.py:111-130`)
 
@@ -177,19 +177,19 @@ Cette fonctionnalité configure un **profil de préférences propre à Momentum 
 def get_theme_assets(profile: ThemeProfile) -> list[AssetEntry]:
     """Return this project's own preference-profile asset entries.
 
-    Ceci configure un profil de préférences interne à Momentum Ultra, PAS un
+    Ceci configure un profil de préférences interne à Flopper, PAS un
     asset pack Momentum natif (pas de frames .bm/.bmx, pas de manifest.txt).
-    Sans effet sur l'affichage réel d'un Flipper sous Momentum tant que le
+    Sans effet sur l'affichage réel d'un Flipper sous le firmware standard tant que le
     format natif des asset packs n'est pas implémenté séparément.
     """
     settings_data = export_theme_settings(profile)
     manifest_bytes = json.dumps(settings_data, indent=2).encode("utf-8")
     dolphin_info = (
-        f"Momentum Ultra — profil de préférences : {profile.title}\n"
+        f"Flopper — profil de préférences : {profile.title}\n"
         f"Pack : {profile.animations_pack}\n"
         f"Barre d'état : {profile.status_bar.value}\n"
         "Ce fichier ne modifie pas l'affichage natif de Momentum : c'est une "
-        "extension de préférences propre à Momentum Ultra.\n"
+        "extension de préférences propre à Flopper.\n"
     ).encode()
 
     return [
@@ -214,12 +214,12 @@ parser.add_argument(
     default="default",
     choices=valid_themes + [t.lower() for t in valid_themes],
     help=(
-        "Profil de préférences visuelles Momentum Ultra (extension propre à "
+        "Profil de préférences visuelles Flopper (extension propre à "
         "ce projet : n'installe pas d'asset pack Momentum natif)."
     ),
 )
 ```
-Mettre à jour la docstring de module en tête de `theme.py` (`"""Momentum UI theme profiles and visual customization management."""`) pour ne plus affirmer une gestion de « thèmes visuels » sans nuance — par exemple : `"""Custom preference-profile management for Momentum Ultra (not native Momentum asset packs)."""`.
+Mettre à jour la docstring de module en tête de `theme.py` (`"""Momentum UI theme profiles and visual customization management."""`) pour ne plus affirmer une gestion de « thèmes visuels » sans nuance — par exemple : `"""Custom preference-profile management for Flopper (not native Momentum asset packs)."""`.
 
 **Point observé, hors périmètre** : le même défaut de conception `choices=` que sur `tache-06` (`--region`) existe aussi sur `--theme` (`cli.py:68-74`) — une valeur invalide produit un message d'erreur anglais d'argparse plutôt que le message français de `get_theme_profile`. Non corrigé ici, cette fiche ne portant que sur le format d'assets ; à traiter si une fiche dédiée à ce point est un jour ouverte.
 

@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "momentum-ultra"
+name = "flopper"
 version = "0.1.0"
-description = "Outil de préparation post-flash pour Flipper Zero sous Momentum"
+description = "Outil de préparation post-flash pour Flipper Zero sous le firmware standard"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -19,7 +19,7 @@ dev = [
 ]
 
 [project.scripts]
-momentum-ultra = "momentum_ultra.cli:main"
+flopper = "flopper.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

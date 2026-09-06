@@ -1,4 +1,4 @@
-"""Manifest definitions and installation plan generation for Momentum Ultra."""
+"""Manifest definitions and installation plan generation for Flopper."""
 
 from __future__ import annotations
 

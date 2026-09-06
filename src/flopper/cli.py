@@ -1,30 +1,30 @@
-"""Command-line interface for momentum-ultra."""
+"""Command-line interface for flopper."""
 
 from __future__ import annotations
 
 import argparse
 import sys
 
-from momentum_ultra import __version__
-from momentum_ultra.bundle import BundleError, export_bundle, import_bundle
-from momentum_ultra.device import (
+from flopper import __version__
+from flopper.bundle import BundleError, export_bundle, import_bundle
+from flopper.device import (
     FlipperDevice,
     FlipperDeviceError,
     find_flipper,
     is_port_available,
 )
-from momentum_ultra.flipper_client import FlipperClient, FlipperClientError
-from momentum_ultra.installer import (
+from flopper.flipper_client import FlipperClient, FlipperClientError
+from flopper.installer import (
     build_modules_settings_action,
     build_region_settings_action,
     execute_install_plan,
     get_default_pack,
 )
-from momentum_ultra.manifest import generate_install_plan
-from momentum_ultra.modules import ModuleType, get_default_module_configs
-from momentum_ultra.regions import RegionCode, get_region_profile
-from momentum_ultra.sync import sync_captures_to_local
-from momentum_ultra.theme import get_available_themes, get_theme_profile
+from flopper.manifest import generate_install_plan
+from flopper.modules import ModuleType, get_default_module_configs
+from flopper.regions import RegionCode, get_region_profile
+from flopper.sync import sync_captures_to_local
+from flopper.theme import get_available_themes, get_theme_profile
 
 
 def _parse_modules_arg(raw: str) -> list[ModuleType]:
@@ -46,8 +46,8 @@ def _parse_modules_arg(raw: str) -> list[ModuleType]:
 def _build_parser() -> argparse.ArgumentParser:
     """Build and return the command-line argument parser."""
     parser = argparse.ArgumentParser(
-        prog="momentum-ultra",
-        description="Outil de préparation post-flash pour Flipper Zero sous Momentum.",
+        prog="flopper",
+        description="Outil de préparation post-flash pour Flipper Zero sous le firmware standard.",
     )
     add = parser.add_argument
     add("--version", action="version", version=__version__, help="Affiche la version.")
@@ -84,7 +84,7 @@ def _build_parser() -> argparse.ArgumentParser:
         default="default",
         choices=valid_themes + [t.lower() for t in valid_themes],
         help=(
-            "Profil de préférences visuelles Momentum Ultra (extension propre à "
+            "Profil de préférences visuelles Flopper (extension propre à "
             "ce projet : n'installe pas d'asset pack Momentum natif)."
         ),
     )
@@ -100,7 +100,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Run the momentum-ultra command-line interface."""
+    """Run the flopper command-line interface."""
     parser = _build_parser()
     argv = sys.argv[1:] if argv is None else argv
     if not argv:
@@ -137,7 +137,7 @@ def main(argv: list[str] | None = None) -> int:
 
 def _handle_list_payloads() -> int:
     """Display available BadUSB payloads library."""
-    from momentum_ultra.badusb import get_default_payloads
+    from flopper.badusb import get_default_payloads
 
     payloads = get_default_payloads()
     print(f"\n--- Bibliothèque de payloads BadUSB ({len(payloads)} scripts) ---")
@@ -267,7 +267,7 @@ def _handle_install(
 
     mode_label = "SIMULATION (--dry-run)" if dry_run else "ÉCRITURE RÉELLE"
     print(
-        f"\n--- Préparation de Momentum Ultra ({pack.name}) sur {device.port} [{mode_label}] ---"
+        f"\n--- Préparation de Flopper ({pack.name}) sur {device.port} [{mode_label}] ---"
     )
 
     plan = generate_install_plan(pack, backup_existing=True)

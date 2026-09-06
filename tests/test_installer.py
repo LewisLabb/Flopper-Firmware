@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from momentum_ultra.flipper_client import FlipperClient
-from momentum_ultra.installer import execute_install_plan, get_default_pack
-from momentum_ultra.manifest import (
+from flopper.flipper_client import FlipperClient
+from flopper.installer import execute_install_plan, get_default_pack
+from flopper.manifest import (
     ActionType,
     PackManifest,
     PlanAction,
